@@ -29,6 +29,14 @@ const normalizeBooth = (val: string | number | null | undefined): string => {
   return isNaN(num) ? halfWidth : String(num);
 };
 
+const formatBreweryLabel = (name: string, isPlaceholder: boolean) => {
+  const source = isPlaceholder && name.includes('洗浄') ? '洗浄' : name;
+  const chars = Array.from(source).slice(0, 4);
+  const line1 = (chars.slice(0, 2).join('') || '').padEnd(2, '\u3000');
+  const line2 = (chars.slice(2, 4).join('') || '').padEnd(2, '\u3000');
+  return { line1, line2 };
+};
+
 // --- Components ---
 
 function MapView({ myList, toggleMyList, toggleFavorite, resetToken }: { myList: MyListState; toggleMyList: (boothNum: string, list: 'want' | 'went') => void; toggleFavorite: (sakeKey: string) => void; resetToken: number }) {
@@ -495,6 +503,7 @@ function MapView({ myList, toggleMyList, toggleFavorite, resetToken }: { myList:
                   const isPlaceholder = cell.booth_number === '-';
                   const isMatched = !isPlaceholder && isBoothMatching(cell.booth_number);
                   const opacityClass = isFilterActive && !isPlaceholder && !isMatched ? 'opacity-20' : 'opacity-100';
+                  const boothLabel = formatBreweryLabel(cell.brewery_name, isPlaceholder);
 
                   let longPressTimer: ReturnType<typeof setTimeout> | null = null;
                   let isLongPress = false;
@@ -545,11 +554,10 @@ function MapView({ myList, toggleMyList, toggleFavorite, resetToken }: { myList:
                             <Check className="w-[70%] h-[70%] text-white" strokeWidth={3} />
                           </span>
                         )}
-                        <span className="text-center leading-[0.92]" style={{ fontSize: 'clamp(8px, 2.8vw, 13px)' }}>
-                          {isPlaceholder
-                            ? <>{cell.brewery_name.includes('洗浄') ? '洗浄' : cell.brewery_name.substring(0, 2)}<br/>{cell.brewery_name.includes('洗浄') ? '' : cell.brewery_name.substring(2, 4)}</>
-                            : <>{cell.brewery_name.substring(0, 2)}<br/>{cell.brewery_name.substring(2, 4)}</>
-                          }
+                        <span className="text-center leading-[0.92] whitespace-nowrap inline-block" style={{ fontSize: 'clamp(8px, 2.8vw, 13px)' }}>
+                          {boothLabel.line1}
+                          <br />
+                          {boothLabel.line2}
                         </span>
                       </div>
                       {rowIndex % 2 === 1 && (
