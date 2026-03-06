@@ -583,6 +583,9 @@ function MapView({ myList, toggleMyList, toggleFavorite, resetToken }: { myList:
             </div>
           ))}
         </div>
+        <p className="text-center text-[11px] text-gray-500 mt-2 mb-1">
+          制作: 徒然研究室 Tsurezure Lab
+        </p>
 
       </div>
 
