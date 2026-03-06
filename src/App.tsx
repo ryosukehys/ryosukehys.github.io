@@ -31,7 +31,7 @@ const normalizeBooth = (val: string | number | null | undefined): string => {
 
 // --- Components ---
 
-function MapView({ myList, toggleMyList, toggleFavorite }: { myList: MyListState; toggleMyList: (boothNum: string, list: 'want' | 'went') => void; toggleFavorite: (sakeKey: string) => void }) {
+function MapView({ myList, toggleMyList, toggleFavorite, resetToken }: { myList: MyListState; toggleMyList: (boothNum: string, list: 'want' | 'went') => void; toggleFavorite: (sakeKey: string) => void; resetToken: number }) {
   const [selectedBrewery, setSelectedBrewery] = useState<AppBrewery | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [mapScale, setMapScale] = useState(1);
@@ -185,6 +185,10 @@ function MapView({ myList, toggleMyList, toggleFavorite }: { myList: MyListState
   useEffect(() => {
     if (selectedBrewery) resetMapZoom();
   }, [selectedBrewery, resetMapZoom]);
+
+  useEffect(() => {
+    resetMapZoom();
+  }, [resetToken, resetMapZoom]);
 
   const getDistance = (touches: React.TouchList) => {
     if (touches.length < 2) return 0;
@@ -454,7 +458,7 @@ function MapView({ myList, toggleMyList, toggleFavorite }: { myList: MyListState
       <div className="px-2">
         <div
           ref={mapViewportRef}
-          className="overflow-hidden rounded-xl border border-gray-200/80 bg-white/30 h-[38vh] min-h-[235px] max-h-[360px]"
+          className="overflow-hidden rounded-xl border border-gray-200/80 bg-white/30 h-[41vh] min-h-[250px] max-h-[390px]"
           onTouchStart={handleMapTouchStart}
           onTouchMove={handleMapTouchMove}
           onTouchEnd={handleMapTouchEnd}
@@ -563,7 +567,7 @@ function MapView({ myList, toggleMyList, toggleFavorite }: { myList: MyListState
         </div>
       </div>
 
-      {/* Legend + Info (scrollable) */}
+      {/* Legend (scrollable) */}
       <div className="flex-1 overflow-y-auto px-2 pb-24 mt-3">
         {/* Area Legend */}
         <div className="flex justify-center gap-4 mb-1 px-4">
@@ -580,28 +584,6 @@ function MapView({ myList, toggleMyList, toggleFavorite }: { myList: MyListState
           ))}
         </div>
 
-        {/* Info Section */}
-        <div className="mx-2 mt-4 mb-2 px-4 py-4 bg-white/70 rounded-xl text-gray-500 text-[11px] leading-relaxed space-y-3 border border-gray-200/60">
-          <div>
-            <p className="font-bold text-gray-600 text-xs mb-1">📖 使い方</p>
-            <ul className="space-y-0.5 list-disc list-inside">
-              <li>ブースをタップで出品酒リストを表示</li>
-              <li>ブースを長押しで「行きたい！」に追加</li>
-              <li>出品酒リストのハートで「飲んだ！」に追加</li>
-              <li>「飲んだ！」タブで各銘柄にひとくちメモを記録可能</li>
-              <li>フィルタで酒米・種類・限定酒などを絞り込み</li>
-              <li>検索窓でスペース区切りのAND全文検索</li>
-            </ul>
-          </div>
-          <div className="border-t border-gray-200 pt-3">
-            <p className="font-bold text-gray-600 text-xs mb-1">⚠️ ご注意</p>
-            <p>本サイトは徒然研究室（X: <a href="https://x.com/tsurezure_lab" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">@tsurezure_lab</a>）が個人的に作成した非公式の出品酒マップです。にいがた酒の陣実行委員会とは一切関係ありません。掲載内容に誤りがある場合があります。正確な情報は公式サイト・会場配布資料をご確認ください。</p>
-          </div>
-          <div className="border-t border-gray-200 pt-3">
-            <p className="font-bold text-gray-600 text-xs mb-1">🔒 プライバシー</p>
-            <p>本サイトはサーバーへの通信を一切行わない静的サイトです。「行きたい！」「飲んだ！」等のデータは、お使いのブラウザ内（localStorage）にのみ保存され、外部に送信されることはありません。ブラウザのデータを消去すると登録内容も消えます。記録を残したい場合はスクリーンショットの保存をおすすめします。</p>
-          </div>
-        </div>
       </div>
 
       {/* Bottom Sheet */}
@@ -917,10 +899,31 @@ function SettingsView({ myList, clearMyList }: { myList: MyListState; clearMyLis
   return (
     <div className="flex flex-col h-full text-gray-800 overflow-hidden" style={{ backgroundColor: '#EEEBEA' }}>
       <div className="pt-12 pb-4 px-4 text-center">
-        <h1 className="text-xl font-bold text-gray-700">管理</h1>
+        <h1 className="text-xl font-bold text-gray-700">説明/管理</h1>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pb-24 space-y-3">
+        <div className="px-4 py-4 bg-white/70 rounded-xl text-gray-500 text-[11px] leading-relaxed space-y-3 border border-gray-200/60">
+          <div>
+            <p className="font-bold text-gray-600 text-xs mb-1">📖 使い方</p>
+            <ul className="space-y-0.5 list-disc list-inside">
+              <li>ブースをタップで出品酒リストを表示</li>
+              <li>ブースを長押しで「行きたい！」に追加</li>
+              <li>出品酒リストのハートで「飲んだ！」に追加</li>
+              <li>「飲んだ！」タブで各銘柄にひとくちメモを記録可能</li>
+              <li>フィルタで酒米・種類・限定酒などを絞り込み</li>
+              <li>検索窓でスペース区切りのAND全文検索</li>
+            </ul>
+          </div>
+          <div className="border-t border-gray-200 pt-3">
+            <p className="font-bold text-gray-600 text-xs mb-1">⚠️ ご注意</p>
+            <p>本サイトは徒然研究室（X: <a href="https://x.com/tsurezure_lab" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">@tsurezure_lab</a>）が個人的に作成した非公式の出品酒マップです。にいがた酒の陣実行委員会とは一切関係ありません。掲載内容に誤りがある場合があります。正確な情報は公式サイト・会場配布資料をご確認ください。</p>
+          </div>
+          <div className="border-t border-gray-200 pt-3">
+            <p className="font-bold text-gray-600 text-xs mb-1">🔒 プライバシー</p>
+            <p>本サイトはサーバーへの通信を一切行わない静的サイトです。「行きたい！」「飲んだ！」等のデータは、お使いのブラウザ内（localStorage）にのみ保存され、外部に送信されることはありません。ブラウザのデータを消去すると登録内容も消えます。記録を残したい場合はスクリーンショットの保存をおすすめします。</p>
+          </div>
+        </div>
         <p className="text-xs text-gray-500 px-1 mb-2">登録データのクリア</p>
         {items.map(item => (
           <div key={item.key} className="bg-white rounded-xl px-4 py-4 shadow-sm border border-gray-200/60">
@@ -968,6 +971,7 @@ function SettingsView({ myList, clearMyList }: { myList: MyListState; clearMyLis
 // --- Main App ---
 export default function App() {
   const [currentTab, setCurrentTab] = useState<'map' | 'list' | 'favorites' | 'settings'>('map');
+  const [mapResetToken, setMapResetToken] = useState(0);
   const [myList, setMyList] = useState<MyListState>(() => {
     try {
       const saved = localStorage.getItem('sakenojin-mylist');
@@ -1056,6 +1060,11 @@ export default function App() {
     });
   }, []);
 
+  const handleMapTabClick = useCallback(() => {
+    setCurrentTab('map');
+    setMapResetToken(prev => prev + 1);
+  }, []);
+
   return (
     <div className="w-full flex justify-center bg-gray-300" style={{ height: '100dvh' }}>
       <div className="w-full max-w-md h-full relative flex flex-col shadow-2xl overflow-hidden" style={{ backgroundColor: '#EEEBEA' }}>
@@ -1065,7 +1074,7 @@ export default function App() {
           <AnimatePresence mode="wait">
             {currentTab === 'map' && (
               <motion.div key="map" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0">
-                <MapView myList={myList} toggleMyList={toggleMyList} toggleFavorite={toggleFavorite} />
+                <MapView myList={myList} toggleMyList={toggleMyList} toggleFavorite={toggleFavorite} resetToken={mapResetToken} />
               </motion.div>
             )}
             {currentTab === 'list' && (
@@ -1090,7 +1099,7 @@ export default function App() {
         <div className="h-20 bg-white border-t border-gray-200 flex justify-around items-center px-6 pb-4 pt-2 shrink-0 z-50 relative">
           <button
             className={`flex flex-col items-center gap-1 transition-colors ${currentTab === 'map' ? 'text-amber-700' : 'text-gray-400'}`}
-            onClick={() => setCurrentTab('map')}
+            onClick={handleMapTabClick}
           >
             <MapIcon className="w-6 h-6" />
             <span className="text-[10px] font-medium">マップ</span>
@@ -1114,7 +1123,7 @@ export default function App() {
             onClick={() => setCurrentTab('settings')}
           >
             <Settings className="w-6 h-6" />
-            <span className="text-[10px] font-medium">管理</span>
+            <span className="text-[10px] font-medium">説明/管理</span>
           </button>
         </div>
       </div>
