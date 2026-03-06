@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Search, Map as MapIcon, List, X, Heart, Check, Settings, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { boothData, sakeData, AppBrewery, AppSake } from './data';
@@ -34,6 +34,18 @@ const normalizeBooth = (val: string | number | null | undefined): string => {
 function MapView({ myList, toggleMyList, toggleFavorite }: { myList: MyListState; toggleMyList: (boothNum: string, list: 'want' | 'went') => void; toggleFavorite: (sakeKey: string) => void }) {
   const [selectedBrewery, setSelectedBrewery] = useState<AppBrewery | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [mapScale, setMapScale] = useState(1);
+  const [mapOffset, setMapOffset] = useState({ x: 0, y: 0 });
+  const mapGestureRef = useRef<{
+    mode: 'pan' | 'pinch';
+    startX: number;
+    startY: number;
+    startOffsetX: number;
+    startOffsetY: number;
+    startDistance: number;
+    startScale: number;
+  } | null>(null);
+  const suppressTapRef = useRef(false);
 
   const [filters, setFilters] = useState<Filters>({
     limited: false,
@@ -148,35 +160,114 @@ function MapView({ myList, toggleMyList, toggleFavorite }: { myList: MyListState
     }
   });
 
-  const resetPinchZoom = () => {
-    // Force zoom reset: create a temporary focused input which iOS uses to reset viewport scale
-    const tmp = document.createElement('input');
-    tmp.setAttribute('type', 'text');
-    tmp.setAttribute('readonly', 'true');
-    tmp.style.position = 'fixed';
-    tmp.style.top = '0';
-    tmp.style.left = '0';
-    tmp.style.opacity = '0';
-    tmp.style.fontSize = '16px'; // prevent iOS auto-zoom on focus
-    tmp.style.width = '0';
-    tmp.style.height = '0';
-    document.body.appendChild(tmp);
-    tmp.focus();
-    setTimeout(() => {
-      tmp.blur();
-      document.body.removeChild(tmp);
-    }, 50);
+  const clampScale = useCallback((value: number) => Math.min(3, Math.max(1, value)), []);
+  const resetMapZoom = useCallback(() => {
+    setMapScale(1);
+    setMapOffset({ x: 0, y: 0 });
+    mapGestureRef.current = null;
+    suppressTapRef.current = false;
+  }, []);
+
+  useEffect(() => {
+    if (selectedBrewery) resetMapZoom();
+  }, [selectedBrewery, resetMapZoom]);
+
+  const getDistance = (touches: React.TouchList) => {
+    if (touches.length < 2) return 0;
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.hypot(dx, dy);
+  };
+
+  const handleMapTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length >= 2) {
+      mapGestureRef.current = {
+        mode: 'pinch',
+        startX: 0,
+        startY: 0,
+        startOffsetX: mapOffset.x,
+        startOffsetY: mapOffset.y,
+        startDistance: getDistance(e.touches),
+        startScale: mapScale,
+      };
+      return;
+    }
+    if (e.touches.length === 1 && mapScale > 1.01) {
+      mapGestureRef.current = {
+        mode: 'pan',
+        startX: e.touches[0].clientX,
+        startY: e.touches[0].clientY,
+        startOffsetX: mapOffset.x,
+        startOffsetY: mapOffset.y,
+        startDistance: 0,
+        startScale: mapScale,
+      };
+    }
+  };
+
+  const handleMapTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    const gesture = mapGestureRef.current;
+    if (!gesture) return;
+
+    if (gesture.mode === 'pinch' && e.touches.length >= 2) {
+      const distance = getDistance(e.touches);
+      if (distance <= 0 || gesture.startDistance <= 0) return;
+      e.preventDefault();
+      suppressTapRef.current = true;
+      setMapScale(clampScale(gesture.startScale * (distance / gesture.startDistance)));
+      return;
+    }
+
+    if (gesture.mode === 'pan' && e.touches.length === 1) {
+      const dx = e.touches[0].clientX - gesture.startX;
+      const dy = e.touches[0].clientY - gesture.startY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+        e.preventDefault();
+        suppressTapRef.current = true;
+      }
+      setMapOffset({ x: gesture.startOffsetX + dx, y: gesture.startOffsetY + dy });
+    }
+  };
+
+  const handleMapTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length >= 2) {
+      mapGestureRef.current = {
+        mode: 'pinch',
+        startX: 0,
+        startY: 0,
+        startOffsetX: mapOffset.x,
+        startOffsetY: mapOffset.y,
+        startDistance: getDistance(e.touches),
+        startScale: mapScale,
+      };
+      return;
+    }
+    if (e.touches.length === 1 && mapScale > 1.01) {
+      mapGestureRef.current = {
+        mode: 'pan',
+        startX: e.touches[0].clientX,
+        startY: e.touches[0].clientY,
+        startOffsetX: mapOffset.x,
+        startOffsetY: mapOffset.y,
+        startDistance: 0,
+        startScale: mapScale,
+      };
+      return;
+    }
+    mapGestureRef.current = null;
+    window.setTimeout(() => {
+      suppressTapRef.current = false;
+    }, 80);
   };
 
   const handleBoothClick = (booth: typeof boothData[number]) => {
     if (booth.booth_number === '-') return;
-    resetPinchZoom();
 
     const targetBoothNum = normalizeBooth(booth.booth_number);
-    
+
     // Find sakes for this brewery
     const sakesForBrewery = sakeData.filter(s => normalizeBooth(s.booth_number) === targetBoothNum);
-    
+
     const brewery: AppBrewery = {
       id: String(booth.booth_number),
       boothNumber: String(booth.booth_number),
@@ -207,7 +298,10 @@ function MapView({ myList, toggleMyList, toggleFavorite }: { myList: MyListState
   };
 
   return (
-    <div className="flex flex-col h-full text-gray-800 overflow-hidden relative" style={{ backgroundColor: '#EEEBEA' }}>
+    <div
+      className="flex flex-col h-full text-gray-800 overflow-hidden relative"
+      style={{ backgroundColor: '#EEEBEA' }}
+    >
       {/* Header */}
       <div className="pt-3 pb-2 px-4 text-center">
         <h1 className="text-base font-bold font-serif tracking-wider text-gray-700 flex items-center justify-center gap-2">
@@ -308,7 +402,21 @@ function MapView({ myList, toggleMyList, toggleFavorite }: { myList: MyListState
 
       {/* Grid */}
       <div className="flex-1 overflow-y-auto px-2 pb-24">
-        <div className="flex flex-col">
+        <div
+          className="overflow-hidden rounded-xl border border-gray-200/80 bg-white/30"
+          onTouchStart={handleMapTouchStart}
+          onTouchMove={handleMapTouchMove}
+          onTouchEnd={handleMapTouchEnd}
+          onTouchCancel={handleMapTouchEnd}
+        >
+          <div
+            className="flex flex-col p-1"
+            style={{
+              transform: `translate3d(${mapOffset.x}px, ${mapOffset.y}px, 0) scale(${mapScale})`,
+              transformOrigin: 'top left',
+              transition: mapGestureRef.current ? 'none' : 'transform 120ms ease-out',
+            }}
+          >
           {grid.map((row, rowIndex) => (
             <div key={rowIndex}>
               {/* Horizontal pathway line between 2×2 blocks (after row 1, 3) */}
@@ -336,6 +444,7 @@ function MapView({ myList, toggleMyList, toggleFavorite }: { myList: MyListState
                   let longPressTimer: ReturnType<typeof setTimeout> | null = null;
                   let isLongPress = false;
                   const handleTouchStart = () => {
+                    if (mapScale > 1.01) return;
                     if (isPlaceholder) return;
                     isLongPress = false;
                     longPressTimer = setTimeout(() => {
@@ -347,6 +456,7 @@ function MapView({ myList, toggleMyList, toggleFavorite }: { myList: MyListState
                     if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
                   };
                   const handleClick = () => {
+                    if (suppressTapRef.current) return;
                     if (isLongPress) { isLongPress = false; return; }
                     handleBoothClick(cell);
                   };
@@ -398,6 +508,7 @@ function MapView({ myList, toggleMyList, toggleFavorite }: { myList: MyListState
               </div>
             </div>
           ))}
+          </div>
         </div>
 
         {/* Area Legend */}
