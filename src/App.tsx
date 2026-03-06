@@ -810,7 +810,7 @@ function MyListView({ myList, toggleMyList, onBreweryTap }: { myList: MyListStat
           </div>
         ) : (
           myListData.map((item) => (
-            <div key={item.id} className="bg-white rounded-xl p-4 text-gray-800 shadow-sm border border-gray-200/60 cursor-pointer active:bg-gray-50" onClick={() => onBreweryTap(item.boothNumber)}>
+            <div key={item.id} className={`rounded-xl p-4 shadow-sm border border-gray-200/60 cursor-pointer active:bg-gray-50 transition-opacity ${activeTab === 'want' && myList.went.has(item.boothNumber) ? 'bg-gray-100 text-gray-400 opacity-60' : 'bg-white text-gray-800'}`} onClick={() => onBreweryTap(item.boothNumber)}>
               <div className="flex items-center gap-3 mb-3">
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg shadow-sm shrink-0"
