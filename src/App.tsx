@@ -434,9 +434,13 @@ function MapView({ myList, toggleMyList, toggleFavorite }: { myList: MyListState
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              drag="y"
+              dragConstraints={{ top: 0 }}
+              dragElastic={0.2}
+              onDragEnd={(_e, info) => { if (info.offset.y > 100 || info.velocity.y > 300) setSelectedBrewery(null); }}
               className="absolute bottom-0 left-0 right-0 bg-white text-gray-800 rounded-t-3xl z-20 max-h-[80vh] flex flex-col shadow-2xl"
             >
-              <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mt-3 mb-4" />
+              <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mt-3 mb-4 cursor-grab active:cursor-grabbing" />
               
               <div className="px-5 pb-4 border-b border-gray-200">
                 <div className="flex items-center gap-3">
