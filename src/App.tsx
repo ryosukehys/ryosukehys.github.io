@@ -506,7 +506,15 @@ function MapView({ myList, toggleMyList, toggleFavorite }: { myList: MyListState
                             </span>
                           ))}
                           <button
-                            onClick={(e) => { e.stopPropagation(); toggleFavorite(`${selectedBrewery.boothNumber}:${sake.name}`); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const key = `${selectedBrewery.boothNumber}:${sake.name}`;
+                              const isAdding = !myList.favorites.has(key);
+                              toggleFavorite(key);
+                              if (isAdding && !myList.went.has(selectedBrewery.boothNumber)) {
+                                toggleMyList(selectedBrewery.boothNumber, 'went');
+                              }
+                            }}
                             className="p-0.5"
                           >
                             <Heart className={`w-4 h-4 transition-colors ${myList.favorites.has(`${selectedBrewery.boothNumber}:${sake.name}`) ? 'text-red-400 fill-red-400' : 'text-gray-300'}`} />
