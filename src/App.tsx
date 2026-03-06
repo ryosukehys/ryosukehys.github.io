@@ -983,18 +983,46 @@ function SettingsView({ myList, clearMyList }: { myList: MyListState; clearMyLis
       <div className="flex-1 overflow-y-auto px-4 pb-24 space-y-3">
         <div className="px-4 py-4 bg-white/70 rounded-xl text-gray-500 text-[11px] leading-relaxed space-y-3 border border-gray-200/60">
           <div>
-            <p className="font-bold text-gray-600 text-xs mb-1">📖 使い方</p>
-            <ul className="space-y-0.5 list-disc list-inside">
-              <li>まず「マップ」タブで会場全体を見て、気になるブースを探します。</li>
-              <li>ブースをタップすると、その蔵の出品酒リストが下から表示されます。</li>
-              <li>ブースを長押しすると、その蔵を「行きたい！」に追加できます。</li>
-              <li>出品酒リストのチェックを押すと「飲んだ！」に追加されます。</li>
-              <li>下のタブ「行きたい！/行った！」で、訪問したい蔵・訪問済みの蔵を確認できます。</li>
-              <li>下のタブ「飲んだ！」では、追加した銘柄の確認とメモ記録ができます。</li>
-              <li>上部のフィルタ（限定酒・有料試飲・種類・酒米）で候補を絞り込めます。</li>
-              <li>検索欄はスペース区切りのAND検索です（例: 「純米 山田錦」）。</li>
-              <li>Safariでうまく動作しないときはChromeで開いてみてください。</li>
-            </ul>
+            <p className="font-bold text-gray-600 text-xs mb-2">📖 使い方</p>
+            <div className="space-y-2.5">
+              <div>
+                <p className="font-bold text-gray-600 mb-0.5">① 事前に気になる蔵を探す</p>
+                <ul className="space-y-0.5 list-disc list-inside">
+                  <li>マップでブースをタップすると出品酒リストが表示されます。</li>
+                  <li>上部のフィルタ（限定酒・有料試飲・種類・酒米）や検索で絞り込めます。検索はスペース区切りでAND検索できます。</li>
+                  <li>気になる蔵はブースを<span className="font-bold">長押し</span>して「行きたい！」に追加。マップ上にハートが付きます。</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-bold text-gray-600 mb-0.5">② 会場で巡回する</p>
+                <ul className="space-y-0.5 list-disc list-inside">
+                  <li>「行きたい！/行った！」タブで、行きたい蔵の一覧を確認できます。</li>
+                  <li>蔵カードをタップするとマップに戻ってその蔵の詳細が開きます。</li>
+                  <li>蔵カード右のチェックで「行った！」をマーク。行った蔵はグレーになります。</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-bold text-gray-600 mb-0.5">③ 飲んで記録する</p>
+                <ul className="space-y-0.5 list-disc list-inside">
+                  <li>出品酒リストのチェックをONにすると「飲んだ！」に追加されます。</li>
+                  <li>チェックONでその場にメモ欄が開くので、感想をすぐ書けます。</li>
+                  <li>メモの紙飛行機アイコンを押すとキーボードが閉じて保存されます。</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-bold text-gray-600 mb-0.5">④ あとで振り返る</p>
+                <ul className="space-y-0.5 list-disc list-inside">
+                  <li>「飲んだ！」タブで、飲んだ銘柄とメモの一覧を振り返れます。</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-bold text-gray-600 mb-0.5">💡 Tips</p>
+                <ul className="space-y-0.5 list-disc list-inside">
+                  <li>マップはピンチで拡大できます。タイトルタップで縮小に戻ります。</li>
+                  <li>Safariでうまく動作しないときはChromeで開いてみてください。</li>
+                </ul>
+              </div>
+            </div>
           </div>
           <div className="border-t border-gray-200 pt-3">
             <p className="font-bold text-gray-600 text-xs mb-1">⚠️ ご注意</p>
