@@ -149,16 +149,13 @@ function MapView({ myList, toggleMyList, toggleFavorite }: { myList: MyListState
   });
 
   const resetPinchZoom = () => {
-    const vp = window.visualViewport;
-    if (vp && vp.scale > 1) {
-      const meta = document.querySelector('meta[name="viewport"]');
-      if (meta) {
-        const original = meta.getAttribute('content') || '';
-        meta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0');
-        requestAnimationFrame(() => {
-          meta.setAttribute('content', original);
-        });
-      }
+    // Always force zoom to 1x when opening detail panel
+    const meta = document.querySelector('meta[name="viewport"]');
+    if (meta) {
+      meta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+      setTimeout(() => {
+        meta.setAttribute('content', 'width=device-width, initial-scale=1.0');
+      }, 300);
     }
   };
 
@@ -416,8 +413,8 @@ function MapView({ myList, toggleMyList, toggleFavorite }: { myList: MyListState
             <ul className="space-y-0.5 list-disc list-inside">
               <li>ブースをタップで出品酒リストを表示</li>
               <li>ブースを長押しで「行きたい！」に追加</li>
-              <li>出品酒リストのハートで「美味しかった！」に追加</li>
-              <li>「美味しかった！」タブで各銘柄にひとくちメモを記録可能</li>
+              <li>出品酒リストのハートで「飲んだ！」に追加</li>
+              <li>「飲んだ！」タブで各銘柄にひとくちメモを記録可能</li>
               <li>フィルタで酒米・種類・限定酒などを絞り込み</li>
               <li>検索窓でスペース区切りのAND全文検索</li>
             </ul>
@@ -428,7 +425,7 @@ function MapView({ myList, toggleMyList, toggleFavorite }: { myList: MyListState
           </div>
           <div className="border-t border-gray-200 pt-3">
             <p className="font-bold text-gray-600 text-xs mb-1">🔒 プライバシー</p>
-            <p>本サイトはサーバーへの通信を一切行わない静的サイトです。「行きたい！」「美味しかった！」等のデータは、お使いのブラウザ内（localStorage）にのみ保存され、外部に送信されることはありません。ブラウザのデータを消去すると登録内容も消えます。記録を残したい場合はスクリーンショットの保存をおすすめします。</p>
+            <p>本サイトはサーバーへの通信を一切行わない静的サイトです。「行きたい！」「飲んだ！」等のデータは、お使いのブラウザ内（localStorage）にのみ保存され、外部に送信されることはありません。ブラウザのデータを消去すると登録内容も消えます。記録を残したい場合はスクリーンショットの保存をおすすめします。</p>
           </div>
         </div>
       </div>
@@ -673,14 +670,14 @@ function FavoritesView({ myList, toggleFavorite, updateMemo }: { myList: MyListS
   return (
     <div className="flex flex-col h-full text-gray-800 overflow-hidden" style={{ backgroundColor: '#EEEBEA' }}>
       <div className="pt-12 pb-4 px-4 text-center">
-        <h1 className="text-xl font-bold text-gray-700">美味しかった！</h1>
+        <h1 className="text-xl font-bold text-gray-700">飲んだ！</h1>
         {favoriteItems.length > 0 && <p className="text-xs text-gray-400 mt-1">{favoriteItems.length}銘柄</p>}
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pb-24 space-y-3">
         {favoriteItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-            <span className="text-4xl mb-3">❤️</span>
+            <span className="text-4xl mb-3">☑️</span>
             <p className="text-sm">マップで銘柄のハートをタップして追加しよう</p>
           </div>
         ) : (
@@ -740,7 +737,7 @@ function SettingsView({ myList, clearMyList }: { myList: MyListState; clearMyLis
   const items: { key: 'want' | 'went' | 'favorites'; label: string; icon: string; count: number }[] = [
     { key: 'want', label: '行きたい！', icon: '🍶', count: myList.want.size },
     { key: 'went', label: '行った！', icon: '✅', count: myList.went.size },
-    { key: 'favorites', label: '美味しかった！', icon: '❤️', count: myList.favorites.size },
+    { key: 'favorites', label: '飲んだ！', icon: '☑️', count: myList.favorites.size },
   ];
 
   return (
@@ -913,8 +910,8 @@ export default function App() {
             className={`flex flex-col items-center gap-1 transition-colors ${currentTab === 'favorites' ? 'text-amber-700' : 'text-gray-400'}`}
             onClick={() => setCurrentTab('favorites')}
           >
-            <Heart className="w-6 h-6" />
-            <span className="text-[10px] font-medium">美味しかった！</span>
+            <Check className="w-6 h-6" />
+            <span className="text-[10px] font-medium">飲んだ！</span>
           </button>
           <button
             className={`flex flex-col items-center gap-1 transition-colors ${currentTab === 'settings' ? 'text-amber-700' : 'text-gray-400'}`}
