@@ -1029,7 +1029,25 @@ export default function App() {
     const provider = getMeta('analytics-provider');
     if (!provider) return;
     if (navigator.doNotTrack === '1') return;
+    if (new URLSearchParams(window.location.search).get('no_analytics') === '1') return;
     if (document.querySelector('script[data-analytics-loader="true"]')) return;
+
+    // Improve campaign analysis without cookies by normalizing UTM campaign into the path.
+    // Example: "/?utm_campaign=opening-day" -> "/c/opening-day"
+    const url = new URL(window.location.href);
+    const campaignRaw = url.searchParams.get('utm_campaign') || url.searchParams.get('campaign');
+    if (campaignRaw && (url.pathname === '/' || url.pathname === '/index.html')) {
+      const campaign = campaignRaw
+        .toLowerCase()
+        .replace(/[^a-z0-9-_]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 64);
+      if (campaign) {
+        const nextUrl = `/c/${campaign}${url.hash}`;
+        window.history.replaceState({}, '', nextUrl);
+      }
+    }
 
     const script = document.createElement('script');
     script.defer = true;
