@@ -757,6 +757,7 @@ function MapView({ myList, toggleMyList, toggleFavorite, updateMemo, resetToken,
                                   updateMemo(sakeKey, el.value);
                                   el.blur();
                                 }
+                                resetMapZoom();
                               }}
                             >
                               <Send className="w-3.5 h-3.5" />
