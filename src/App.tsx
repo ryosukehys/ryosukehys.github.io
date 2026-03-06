@@ -1006,6 +1006,7 @@ function SettingsView({ myList, clearMyList }: { myList: MyListState; clearMyLis
                   <li>マップでブースをタップすると出品酒リストが表示されます。</li>
                   <li>上部のフィルタ（限定酒・有料試飲・種類・酒米）や検索で絞り込めます。検索はスペース区切りでAND検索できます。</li>
                   <li>気になる蔵はブースを<span className="font-bold">長押し</span>して「行きたい！」に追加。マップ上にハートが付きます。</li>
+                  <li>出品酒リストで気になる銘柄のハート♡をタップすると、ピンクになり「飲みたい！」をマーク。各タブの銘柄一覧にも反映されます。</li>
                 </ul>
               </div>
               <div>
