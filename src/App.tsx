@@ -148,8 +148,23 @@ function MapView({ myList, toggleMyList, toggleFavorite }: { myList: MyListState
     }
   });
 
+  const resetPinchZoom = () => {
+    const vp = window.visualViewport;
+    if (vp && vp.scale > 1) {
+      const meta = document.querySelector('meta[name="viewport"]');
+      if (meta) {
+        const original = meta.getAttribute('content') || '';
+        meta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0');
+        requestAnimationFrame(() => {
+          meta.setAttribute('content', original);
+        });
+      }
+    }
+  };
+
   const handleBoothClick = (booth: typeof boothData[number]) => {
     if (booth.booth_number === '-') return;
+    resetPinchZoom();
 
     const targetBoothNum = normalizeBooth(booth.booth_number);
     
