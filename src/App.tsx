@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { Search, Map as MapIcon, List, X, Heart, Check, Settings, Trash2, Send, Users, Copy, UserPlus } from 'lucide-react';
+import { Search, Map as MapIcon, List, X, Heart, Check, Settings, Trash2, Send, Users, Copy, UserPlus, Download, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { boothData, sakeData, AppBrewery, AppSake } from './data';
 
@@ -61,6 +61,34 @@ const decodeShareCode = (code: string): string[] => {
     return nums;
   } catch {
     return [];
+  }
+};
+
+const encodeGroupCode = (members: GroupMember[], myName: string, myWants: Set<string>): string => {
+  const allMembers = [
+    { name: myName || 'わたし', wants: Array.from(myWants).map(Number).filter(n => n >= 1 && n <= 82).sort((a, b) => a - b) },
+    ...members.map(m => ({ name: m.name, wants: m.wants.map(Number).filter(n => n >= 1 && n <= 82).sort((a, b) => a - b) }))
+  ];
+  const json = JSON.stringify(allMembers);
+  return 'G1:' + btoa(unescape(encodeURIComponent(json))).replace(/=+$/, '');
+};
+
+const decodeGroupCode = (code: string): { name: string; wants: string[] }[] | null => {
+  try {
+    if (!code.startsWith('G1:')) return null;
+    const base64 = code.slice(3);
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+    const json = decodeURIComponent(escape(atob(padded)));
+    const parsed = JSON.parse(json);
+    if (!Array.isArray(parsed) || parsed.length === 0) return null;
+    return parsed.filter((m: { name?: string; wants?: number[] }) =>
+      m && typeof m.name === 'string' && Array.isArray(m.wants)
+    ).map((m: { name: string; wants: number[] }) => ({
+      name: m.name,
+      wants: m.wants.map(String).filter(s => { const n = Number(s); return n >= 1 && n <= 82; })
+    }));
+  } catch {
+    return null;
   }
 };
 
@@ -1166,20 +1194,36 @@ function SettingsView({ myList, clearMyList }: { myList: MyListState; clearMyLis
   );
 }
 
-function GroupView({ myList, groupMembers, addGroupMember, removeGroupMember }: { myList: MyListState; groupMembers: GroupMember[]; addGroupMember: (name: string, code: string) => boolean; removeGroupMember: (id: string) => void }) {
+function GroupView({ myList, groupMembers, addGroupMember, removeGroupMember, importGroup }: { myList: MyListState; groupMembers: GroupMember[]; addGroupMember: (name: string, code: string) => boolean; removeGroupMember: (id: string) => void; importGroup: (code: string) => boolean }) {
   const [memberName, setMemberName] = useState('');
   const [memberCode, setMemberCode] = useState('');
   const [copyFeedback, setCopyFeedback] = useState(false);
+  const [copyGroupFeedback, setCopyGroupFeedback] = useState(false);
   const [error, setError] = useState('');
+  const [groupImportCode, setGroupImportCode] = useState('');
+  const [importError, setImportError] = useState('');
+  const [importSuccess, setImportSuccess] = useState(false);
+  const [myName, setMyName] = useState(() => {
+    try { return localStorage.getItem('sakenojin-myname') || ''; } catch { return ''; }
+  });
 
   const myCode = useMemo(() => encodeShareCode(myList.want), [myList.want]);
 
-  const handleCopy = async () => {
+  const groupCode = useMemo(() => {
+    if (groupMembers.length === 0 && myList.want.size === 0) return '';
+    return encodeGroupCode(groupMembers, myName, myList.want);
+  }, [groupMembers, myList.want, myName]);
+
+  const savedGroupId = useMemo(() => {
+    try { return localStorage.getItem('sakenojin-group-id') || ''; } catch { return ''; }
+  }, []);
+
+  const handleCopy = async (text: string, setFeedback: (v: boolean) => void) => {
     try {
-      await navigator.clipboard.writeText(myCode);
+      await navigator.clipboard.writeText(text);
     } catch {
       const ta = document.createElement('textarea');
-      ta.value = myCode;
+      ta.value = text;
       ta.style.position = 'fixed';
       ta.style.opacity = '0';
       document.body.appendChild(ta);
@@ -1187,8 +1231,8 @@ function GroupView({ myList, groupMembers, addGroupMember, removeGroupMember }: 
       document.execCommand('copy');
       document.body.removeChild(ta);
     }
-    setCopyFeedback(true);
-    setTimeout(() => setCopyFeedback(false), 2000);
+    setFeedback(true);
+    setTimeout(() => setFeedback(false), 2000);
   };
 
   const handleAddMember = () => {
@@ -1204,6 +1248,25 @@ function GroupView({ myList, groupMembers, addGroupMember, removeGroupMember }: 
     }
   };
 
+  const handleImportGroup = () => {
+    setImportError('');
+    setImportSuccess(false);
+    if (!groupImportCode.trim()) { setImportError('グループIDを入力してください'); return; }
+    const success = importGroup(groupImportCode.trim());
+    if (success) {
+      setGroupImportCode('');
+      setImportSuccess(true);
+      setTimeout(() => setImportSuccess(false), 3000);
+    } else {
+      setImportError('無効なグループIDです');
+    }
+  };
+
+  const handleMyNameChange = (name: string) => {
+    setMyName(name);
+    try { localStorage.setItem('sakenojin-myname', name); } catch {}
+  };
+
   return (
     <div className="flex flex-col h-full text-gray-800 overflow-hidden" style={{ backgroundColor: '#EEEBEA' }}>
       <div className="pt-12 pb-4 px-4 text-center">
@@ -1212,9 +1275,70 @@ function GroupView({ myList, groupMembers, addGroupMember, removeGroupMember }: 
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pb-24 space-y-4">
-        {/* My share code */}
+        {/* Import group by ID */}
+        <div className="bg-white rounded-xl px-4 py-4 shadow-sm border border-blue-200/60">
+          <p className="text-sm font-bold text-blue-600 mb-2"><Download className="w-4 h-4 inline -mt-0.5 mr-1" />グループIDで参加</p>
+          <p className="text-[10px] text-gray-400 mb-2">友達から受け取ったグループIDを入力してグループに参加できます</p>
+          <div className="space-y-2">
+            <input
+              type="text"
+              placeholder="グループIDを貼り付け"
+              value={groupImportCode}
+              onChange={e => setGroupImportCode(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 placeholder-gray-300"
+            />
+            {importError && <p className="text-xs text-red-500">{importError}</p>}
+            {importSuccess && <p className="text-xs text-emerald-600">グループを読み込みました！</p>}
+            <button
+              onClick={handleImportGroup}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg bg-blue-600 text-white active:bg-blue-700 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              グループを読み込む
+            </button>
+          </div>
+          {savedGroupId && (
+            <p className="text-[10px] text-emerald-600 mt-2">前回のグループが保存されています</p>
+          )}
+        </div>
+
+        {/* Group export code */}
+        <div className="bg-white rounded-xl px-4 py-4 shadow-sm border border-amber-200/60">
+          <p className="text-sm font-bold text-amber-700 mb-2"><Upload className="w-4 h-4 inline -mt-0.5 mr-1" />グループIDを作成・共有</p>
+          <p className="text-[10px] text-gray-400 mb-2">あなたの「行きたい！」と追加済みメンバーをまとめた1つのIDを生成します。友達に送って共有しましょう。</p>
+          <div className="space-y-2">
+            <input
+              type="text"
+              placeholder="あなたの名前（例：太郎）"
+              value={myName}
+              onChange={e => handleMyNameChange(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 placeholder-gray-300"
+            />
+          </div>
+          {groupCode ? (
+            <>
+              <div className="mt-2 bg-gray-50 rounded-lg px-3 py-2 text-xs text-gray-600 font-mono break-all select-all max-h-20 overflow-y-auto">
+                {groupCode}
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1">
+                あなた（{myList.want.size}蔵）{groupMembers.length > 0 ? ` + ${groupMembers.length}人のメンバー` : ''}の情報が含まれます
+              </p>
+              <button
+                onClick={() => handleCopy(groupCode, setCopyGroupFeedback)}
+                className={`mt-2 flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg text-white transition-colors ${copyGroupFeedback ? 'bg-emerald-500' : 'bg-amber-600 active:bg-amber-700'}`}
+              >
+                <Copy className="w-3.5 h-3.5" />
+                {copyGroupFeedback ? 'コピーしました！' : 'グループIDをコピー'}
+              </button>
+            </>
+          ) : (
+            <p className="text-xs text-gray-400 mt-2">マップから「行きたい！」を追加するとグループIDが生成されます</p>
+          )}
+        </div>
+
+        {/* My individual share code */}
         <div className="bg-white rounded-xl px-4 py-4 shadow-sm border border-gray-200/60">
-          <p className="text-sm font-bold text-gray-600 mb-2">あなたの共有コード</p>
+          <p className="text-sm font-bold text-gray-600 mb-2">あなたの個人共有コード</p>
           {myList.want.size > 0 ? (
             <>
               <div className="bg-gray-50 rounded-lg px-3 py-2 text-xs text-gray-600 font-mono break-all select-all">
@@ -1222,7 +1346,7 @@ function GroupView({ myList, groupMembers, addGroupMember, removeGroupMember }: 
               </div>
               <p className="text-[10px] text-gray-400 mt-1">行きたい！（{myList.want.size}蔵）の情報が含まれます</p>
               <button
-                onClick={handleCopy}
+                onClick={() => handleCopy(myCode, setCopyFeedback)}
                 className={`mt-2 flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg text-white transition-colors ${copyFeedback ? 'bg-emerald-500' : 'bg-amber-600 active:bg-amber-700'}`}
               >
                 <Copy className="w-3.5 h-3.5" />
@@ -1236,7 +1360,7 @@ function GroupView({ myList, groupMembers, addGroupMember, removeGroupMember }: 
 
         {/* Add member */}
         <div className="bg-white rounded-xl px-4 py-4 shadow-sm border border-gray-200/60">
-          <p className="text-sm font-bold text-gray-600 mb-2">メンバーを追加</p>
+          <p className="text-sm font-bold text-gray-600 mb-2">メンバーを個別に追加</p>
           <div className="space-y-2">
             <input
               type="text"
@@ -1247,7 +1371,7 @@ function GroupView({ myList, groupMembers, addGroupMember, removeGroupMember }: 
             />
             <input
               type="text"
-              placeholder="共有コードを貼り付け"
+              placeholder="個人共有コードを貼り付け"
               value={memberCode}
               onChange={e => setMemberCode(e.target.value)}
               className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 placeholder-gray-300"
@@ -1297,10 +1421,13 @@ function GroupView({ myList, groupMembers, addGroupMember, removeGroupMember }: 
           <p className="font-bold text-gray-600 mb-1">使い方</p>
           <ol className="list-decimal pl-4 space-y-1">
             <li>マップで「行きたい！」蔵を登録する</li>
-            <li>上の共有コードをコピーして友達に送る</li>
-            <li>友達のコードを受け取って「メンバーを追加」する</li>
+            <li>「グループIDを作成・共有」から自分の名前を入力し、グループIDをコピーして友達に送る</li>
+            <li>友達のグループIDを「グループIDで参加」に貼り付けて読み込む</li>
             <li>マップ上にメンバーの行きたい蔵が <Users className="w-3 h-3 text-blue-500 inline -mt-0.5" /> で表示されます</li>
+            <li>グループは自動保存されるので、次回以降の入力は不要です</li>
           </ol>
+          <p className="font-bold text-gray-600 mt-3 mb-1">個別追加</p>
+          <p>友達の個人共有コードを使って1人ずつ追加することもできます。</p>
         </div>
       </div>
     </div>
@@ -1352,6 +1479,20 @@ export default function App() {
       saveGroup(next);
       return next;
     });
+  }, []);
+
+  const importGroup = useCallback((code: string): boolean => {
+    const members = decodeGroupCode(code);
+    if (!members || members.length === 0) return false;
+    const newMembers: GroupMember[] = members.map((m, i) => ({
+      id: `g-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 6)}`,
+      name: m.name,
+      wants: m.wants
+    }));
+    setGroupMembers(newMembers);
+    saveGroup(newMembers);
+    try { localStorage.setItem('sakenojin-group-id', code); } catch {}
+    return true;
   }, []);
 
   useEffect(() => {
@@ -1529,7 +1670,7 @@ export default function App() {
             )}
             {currentTab === 'group' && (
               <motion.div key="group" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0">
-                <GroupView myList={myList} groupMembers={groupMembers} addGroupMember={addGroupMember} removeGroupMember={removeGroupMember} />
+                <GroupView myList={myList} groupMembers={groupMembers} addGroupMember={addGroupMember} removeGroupMember={removeGroupMember} importGroup={importGroup} />
               </motion.div>
             )}
             {currentTab === 'settings' && (
