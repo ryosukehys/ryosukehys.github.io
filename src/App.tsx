@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { Search, Map as MapIcon, List, X, Heart, Check, Settings, Trash2, Send } from 'lucide-react';
+import { Search, Map as MapIcon, List, X, Heart, Check, Settings, Trash2, Send, Users, Copy, UserPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { boothData, sakeData, AppBrewery, AppSake } from './data';
 
@@ -21,6 +21,14 @@ interface Filters {
   type: string[];
 }
 
+interface GroupMember {
+  id: string;
+  name: string;
+  wants: string[]; // booth numbers
+}
+
+const memberColors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316'];
+
 // --- Utilities ---
 const normalizeBooth = (val: string | number | null | undefined): string => {
   if (val === null || val === undefined) return '';
@@ -38,9 +46,27 @@ const formatBreweryLabel = (name: string, isPlaceholder: boolean) => {
   return { line1, line2 };
 };
 
+const encodeShareCode = (wants: Set<string>): string => {
+  const sorted = Array.from(wants).map(Number).filter(n => n >= 1 && n <= 82).sort((a, b) => a - b);
+  return btoa(sorted.join(',')).replace(/=+$/, '');
+};
+
+const decodeShareCode = (code: string): string[] => {
+  try {
+    const padded = code + '='.repeat((4 - (code.length % 4)) % 4);
+    const decoded = atob(padded);
+    const nums = decoded.split(',').map(s => s.trim()).filter(s => /^\d+$/.test(s));
+    if (nums.length === 0) return [];
+    if (nums.some(n => Number(n) < 1 || Number(n) > 82)) return [];
+    return nums;
+  } catch {
+    return [];
+  }
+};
+
 // --- Components ---
 
-function MapView({ myList, toggleMyList, toggleFavorite, toggleSakeWant, updateMemo, resetToken, openBoothNumber, onOpenBoothHandled }: { myList: MyListState; toggleMyList: (boothNum: string, list: 'want' | 'went') => void; toggleFavorite: (sakeKey: string) => void; toggleSakeWant: (sakeKey: string) => void; updateMemo: (sakeKey: string, text: string) => void; resetToken: number; openBoothNumber: string | null; onOpenBoothHandled: () => void }) {
+function MapView({ myList, toggleMyList, toggleFavorite, toggleSakeWant, updateMemo, resetToken, openBoothNumber, onOpenBoothHandled, groupMembers }: { myList: MyListState; toggleMyList: (boothNum: string, list: 'want' | 'went') => void; toggleFavorite: (sakeKey: string) => void; toggleSakeWant: (sakeKey: string) => void; updateMemo: (sakeKey: string, text: string) => void; resetToken: number; openBoothNumber: string | null; onOpenBoothHandled: () => void; groupMembers: GroupMember[] }) {
   const [selectedBrewery, setSelectedBrewery] = useState<AppBrewery | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [mapScale, setMapScale] = useState(1);
@@ -171,6 +197,19 @@ function MapView({ myList, toggleMyList, toggleFavorite, toggleSakeWant, updateM
       grid[gridRows - booth.row][gridCols - booth.col] = booth;
     }
   });
+
+  const groupBoothMap = useMemo(() => {
+    const map = new Map<string, { names: string[]; colors: string[] }>();
+    groupMembers.forEach((member, idx) => {
+      member.wants.forEach(boothNum => {
+        const entry = map.get(boothNum) || { names: [], colors: [] };
+        entry.names.push(member.name);
+        entry.colors.push(memberColors[idx % memberColors.length]);
+        map.set(boothNum, entry);
+      });
+    });
+    return map;
+  }, [groupMembers]);
 
   const clampScale = useCallback((value: number) => Math.min(3, Math.max(1, value)), []);
   const clampOffset = useCallback((offset: { x: number; y: number }, scale: number) => {
@@ -592,6 +631,11 @@ function MapView({ myList, toggleMyList, toggleFavorite, toggleSakeWant, updateM
                             <Check className="w-[70%] h-[70%] text-white" strokeWidth={3} />
                           </span>
                         )}
+                        {!isPlaceholder && groupBoothMap.has(String(cell.booth_number)) && (
+                          <span className="absolute bottom-0 right-0 flex items-center justify-center w-[40%] h-[40%] bg-blue-500 rounded-full drop-shadow-sm">
+                            <Users className="w-[65%] h-[65%] text-white" strokeWidth={2.5} />
+                          </span>
+                        )}
                         <span className="text-center leading-[0.92] whitespace-nowrap inline-block" style={{ fontSize: 'clamp(7.6px, 2.66vw, 12.35px)' }}>
                           {boothLabel.line1}
                           <br />
@@ -698,6 +742,18 @@ function MapView({ myList, toggleMyList, toggleFavorite, toggleSakeWant, updateM
                     行った！
                   </button>
                 </div>
+                {(() => {
+                  const gInfo = selectedBrewery ? groupBoothMap.get(selectedBrewery.boothNumber) : undefined;
+                  if (!gInfo) return null;
+                  return (
+                    <div className="mt-3 flex items-center gap-2 flex-wrap">
+                      <Users className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                      <span className="text-xs text-blue-600">
+                        {gInfo.names.join('、')} も行きたい！
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="flex-1 overflow-y-auto px-5 py-4">
@@ -1110,9 +1166,150 @@ function SettingsView({ myList, clearMyList }: { myList: MyListState; clearMyLis
   );
 }
 
+function GroupView({ myList, groupMembers, addGroupMember, removeGroupMember }: { myList: MyListState; groupMembers: GroupMember[]; addGroupMember: (name: string, code: string) => boolean; removeGroupMember: (id: string) => void }) {
+  const [memberName, setMemberName] = useState('');
+  const [memberCode, setMemberCode] = useState('');
+  const [copyFeedback, setCopyFeedback] = useState(false);
+  const [error, setError] = useState('');
+
+  const myCode = useMemo(() => encodeShareCode(myList.want), [myList.want]);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(myCode);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = myCode;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    setCopyFeedback(true);
+    setTimeout(() => setCopyFeedback(false), 2000);
+  };
+
+  const handleAddMember = () => {
+    setError('');
+    if (!memberName.trim()) { setError('名前を入力してください'); return; }
+    if (!memberCode.trim()) { setError('共有コードを入力してください'); return; }
+    const success = addGroupMember(memberName.trim(), memberCode.trim());
+    if (success) {
+      setMemberName('');
+      setMemberCode('');
+    } else {
+      setError('無効な共有コードです');
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full text-gray-800 overflow-hidden" style={{ backgroundColor: '#EEEBEA' }}>
+      <div className="pt-12 pb-4 px-4 text-center">
+        <h1 className="text-xl font-bold text-gray-700">グループ共有</h1>
+        <p className="text-xs text-gray-400 mt-1">行きたい酒蔵をグループで共有</p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4 pb-24 space-y-4">
+        {/* My share code */}
+        <div className="bg-white rounded-xl px-4 py-4 shadow-sm border border-gray-200/60">
+          <p className="text-sm font-bold text-gray-600 mb-2">あなたの共有コード</p>
+          {myList.want.size > 0 ? (
+            <>
+              <div className="bg-gray-50 rounded-lg px-3 py-2 text-xs text-gray-600 font-mono break-all select-all">
+                {myCode}
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1">行きたい！（{myList.want.size}蔵）の情報が含まれます</p>
+              <button
+                onClick={handleCopy}
+                className={`mt-2 flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg text-white transition-colors ${copyFeedback ? 'bg-emerald-500' : 'bg-amber-600 active:bg-amber-700'}`}
+              >
+                <Copy className="w-3.5 h-3.5" />
+                {copyFeedback ? 'コピーしました！' : 'コードをコピー'}
+              </button>
+            </>
+          ) : (
+            <p className="text-xs text-gray-400">マップから「行きたい！」を追加するとコードが生成されます</p>
+          )}
+        </div>
+
+        {/* Add member */}
+        <div className="bg-white rounded-xl px-4 py-4 shadow-sm border border-gray-200/60">
+          <p className="text-sm font-bold text-gray-600 mb-2">メンバーを追加</p>
+          <div className="space-y-2">
+            <input
+              type="text"
+              placeholder="名前（例：田中さん）"
+              value={memberName}
+              onChange={e => setMemberName(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 placeholder-gray-300"
+            />
+            <input
+              type="text"
+              placeholder="共有コードを貼り付け"
+              value={memberCode}
+              onChange={e => setMemberCode(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 placeholder-gray-300"
+            />
+            {error && <p className="text-xs text-red-500">{error}</p>}
+            <button
+              onClick={handleAddMember}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg bg-blue-600 text-white active:bg-blue-700 transition-colors"
+            >
+              <UserPlus className="w-4 h-4" />
+              追加
+            </button>
+          </div>
+        </div>
+
+        {/* Member list */}
+        {groupMembers.length > 0 && (
+          <div>
+            <p className="text-xs text-gray-500 px-1 mb-2">メンバー一覧（{groupMembers.length}人）</p>
+            <div className="space-y-2">
+              {groupMembers.map((member, index) => (
+                <div key={member.id} className="bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-200/60 flex items-center gap-3">
+                  <span
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
+                    style={{ backgroundColor: memberColors[index % memberColors.length] }}
+                  >
+                    {Array.from(member.name)[0]}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{member.name}</p>
+                    <p className="text-[10px] text-gray-400">{member.wants.length}蔵</p>
+                  </div>
+                  <button
+                    onClick={() => removeGroupMember(member.id)}
+                    className="p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+                  >
+                    <X className="w-4 h-4 text-gray-400" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* How to use */}
+        <div className="px-4 py-3 bg-white/70 rounded-xl text-gray-500 text-xs leading-relaxed border border-gray-200/60">
+          <p className="font-bold text-gray-600 mb-1">使い方</p>
+          <ol className="list-decimal pl-4 space-y-1">
+            <li>マップで「行きたい！」蔵を登録する</li>
+            <li>上の共有コードをコピーして友達に送る</li>
+            <li>友達のコードを受け取って「メンバーを追加」する</li>
+            <li>マップ上にメンバーの行きたい蔵が <Users className="w-3 h-3 text-blue-500 inline -mt-0.5" /> で表示されます</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // --- Main App ---
 export default function App() {
-  const [currentTab, setCurrentTab] = useState<'map' | 'list' | 'favorites' | 'settings'>('map');
+  const [currentTab, setCurrentTab] = useState<'map' | 'list' | 'favorites' | 'group' | 'settings'>('map');
   const [mapResetToken, setMapResetToken] = useState(0);
   const [openBoothNumber, setOpenBoothNumber] = useState<string | null>(null);
   const [myList, setMyList] = useState<MyListState>(() => {
@@ -1125,6 +1322,37 @@ export default function App() {
     } catch {}
     return { want: new Set<string>(), went: new Set<string>(), favorites: new Set<string>(), sakeWants: new Set<string>(), memos: {} as Record<string, string> };
   });
+
+  const [groupMembers, setGroupMembers] = useState<GroupMember[]>(() => {
+    try {
+      const saved = localStorage.getItem('sakenojin-group');
+      if (saved) return JSON.parse(saved) as GroupMember[];
+    } catch {}
+    return [];
+  });
+
+  const saveGroup = (members: GroupMember[]) => {
+    localStorage.setItem('sakenojin-group', JSON.stringify(members));
+  };
+
+  const addGroupMember = useCallback((name: string, code: string): boolean => {
+    const wants = decodeShareCode(code);
+    if (wants.length === 0) return false;
+    setGroupMembers(prev => {
+      const next = [...prev, { id: `g-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, name, wants }];
+      saveGroup(next);
+      return next;
+    });
+    return true;
+  }, []);
+
+  const removeGroupMember = useCallback((id: string) => {
+    setGroupMembers(prev => {
+      const next = prev.filter(m => m.id !== id);
+      saveGroup(next);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     const getMeta = (name: string) => document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`)?.content?.trim() ?? '';
@@ -1286,7 +1514,7 @@ export default function App() {
           <AnimatePresence mode="wait">
             {currentTab === 'map' && (
               <motion.div key="map" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0">
-                <MapView myList={myList} toggleMyList={toggleMyList} toggleFavorite={toggleFavorite} toggleSakeWant={toggleSakeWant} updateMemo={updateMemo} resetToken={mapResetToken} openBoothNumber={openBoothNumber} onOpenBoothHandled={() => setOpenBoothNumber(null)} />
+                <MapView myList={myList} toggleMyList={toggleMyList} toggleFavorite={toggleFavorite} toggleSakeWant={toggleSakeWant} updateMemo={updateMemo} resetToken={mapResetToken} openBoothNumber={openBoothNumber} onOpenBoothHandled={() => setOpenBoothNumber(null)} groupMembers={groupMembers} />
               </motion.div>
             )}
             {currentTab === 'list' && (
@@ -1297,6 +1525,11 @@ export default function App() {
             {currentTab === 'favorites' && (
               <motion.div key="favorites" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0">
                 <FavoritesView myList={myList} toggleFavorite={toggleFavorite} updateMemo={updateMemo} />
+              </motion.div>
+            )}
+            {currentTab === 'group' && (
+              <motion.div key="group" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0">
+                <GroupView myList={myList} groupMembers={groupMembers} addGroupMember={addGroupMember} removeGroupMember={removeGroupMember} />
               </motion.div>
             )}
             {currentTab === 'settings' && (
@@ -1329,6 +1562,13 @@ export default function App() {
           >
             <Check className="w-6 h-6" />
             <span className="text-[10px] font-medium">飲んだ！</span>
+          </button>
+          <button
+            className={`flex flex-col items-center gap-1 transition-colors ${currentTab === 'group' ? 'text-amber-700' : 'text-gray-400'}`}
+            onClick={() => setCurrentTab('group')}
+          >
+            <Users className="w-6 h-6" />
+            <span className="text-[10px] font-medium">グループ</span>
           </button>
           <button
             className={`flex flex-col items-center gap-1 transition-colors ${currentTab === 'settings' ? 'text-amber-700' : 'text-gray-400'}`}
