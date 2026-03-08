@@ -1507,23 +1507,59 @@ export default function App() {
     return subscribeToConnectionState(setConnectionStatus);
   }, []);
 
-  // Sync my wants to Firebase when they change (if in a group)
+  // Sync all my data to Firebase when they change (if in a group)
   useEffect(() => {
     if (!activeGroupId || !myName || !isFirebaseConfigured()) return;
     setSyncError(null);
-    syncMyDataToGroup(activeGroupId, myMemberId, myName, Array.from(myList.want)).then(() => {
+    syncMyDataToGroup(activeGroupId, myMemberId, myName, {
+      wants: Array.from(myList.want),
+      went: Array.from(myList.went),
+      favorites: Array.from(myList.favorites),
+      sakeWants: Array.from(myList.sakeWants),
+      memos: myList.memos,
+    }).then(() => {
       setupOnDisconnect(activeGroupId, myMemberId);
     }).catch((err) => {
       setSyncError('データの同期に失敗しました: ' + (err?.message || '不明なエラー'));
     });
-  }, [activeGroupId, myMemberId, myName, myList.want]);
+  }, [activeGroupId, myMemberId, myName, myList]);
 
-  // Subscribe to Firebase group updates
+  // Subscribe to Firebase group updates + restore own data if local is empty
+  const hasRestoredRef = useRef(false);
   useEffect(() => {
     if (!activeGroupId || !isFirebaseConfigured()) return;
+    hasRestoredRef.current = false;
     setSyncError(null);
     const unsubscribe = subscribeToGroup(activeGroupId, (members) => {
       setSyncError(null);
+
+      // Restore own data from Firebase if local data is empty (e.g. new device / cleared cache)
+      if (!hasRestoredRef.current) {
+        hasRestoredRef.current = true;
+        const myData = members[myMemberId] as FirebaseGroupMember | undefined;
+        if (myData) {
+          setMyList(prev => {
+            // Only restore if local is mostly empty (no wants and no went)
+            if (prev.want.size > 0 || prev.went.size > 0) return prev;
+            const restored: MyListState = {
+              want: new Set(myData.wants || []),
+              went: new Set(myData.went || []),
+              favorites: new Set(myData.favorites || []),
+              sakeWants: new Set(myData.sakeWants || []),
+              memos: myData.memos || {},
+            };
+            localStorage.setItem('sakenojin-mylist', JSON.stringify({
+              want: Array.from(restored.want),
+              went: Array.from(restored.went),
+              favorites: Array.from(restored.favorites),
+              sakeWants: Array.from(restored.sakeWants),
+              memos: restored.memos,
+            }));
+            return restored;
+          });
+        }
+      }
+
       const otherMembers: GroupMember[] = Object.entries(members)
         .filter(([id]) => id !== myMemberId)
         .map(([id, data]) => ({
@@ -1549,9 +1585,15 @@ export default function App() {
     localStorage.setItem('sakenojin-group-id', cleanId);
     localStorage.setItem('sakenojin-myname', name.trim());
     // Initial sync
-    syncMyDataToGroup(cleanId, myMemberId, name.trim(), Array.from(myList.want)).catch(() => {});
+    syncMyDataToGroup(cleanId, myMemberId, name.trim(), {
+      wants: Array.from(myList.want),
+      went: Array.from(myList.went),
+      favorites: Array.from(myList.favorites),
+      sakeWants: Array.from(myList.sakeWants),
+      memos: myList.memos,
+    }).catch(() => {});
     return true;
-  }, [myMemberId, myList.want]);
+  }, [myMemberId, myList]);
 
   const handleLeaveGroup = useCallback(() => {
     if (activeGroupId && isFirebaseConfigured()) {

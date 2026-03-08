@@ -24,6 +24,10 @@ const db = getDatabase(app);
 export interface FirebaseGroupMember {
   name: string;
   wants: string[]; // booth numbers
+  went?: string[];
+  favorites?: string[];
+  sakeWants?: string[];
+  memos?: Record<string, string>;
   updatedAt: number;
 }
 
@@ -50,12 +54,16 @@ export function syncMyDataToGroup(
   groupId: string,
   memberId: string,
   name: string,
-  wants: string[]
+  data: { wants: string[]; went: string[]; favorites: string[]; sakeWants: string[]; memos: Record<string, string> }
 ): Promise<void> {
   const memberRef = ref(db, `groups/${groupId}/members/${memberId}`);
   return set(memberRef, {
     name,
-    wants,
+    wants: data.wants,
+    went: data.went,
+    favorites: data.favorites,
+    sakeWants: data.sakeWants,
+    memos: data.memos,
     updatedAt: Date.now()
   });
 }
