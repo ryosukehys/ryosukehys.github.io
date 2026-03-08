@@ -12,7 +12,7 @@ const firebaseConfig = {
   projectId: "niigata-sake-no-jin-26",
   storageBucket: "niigata-sake-no-jin-26.firebasestorage.app",
   messagingSenderId: "482488531672",
-  appId: "1:482488531672:web:e0fbb4e410f304a2b3f5ad"
+  appId: "1:482488531672:web:9e807a971085c85fb3f5ad"
 };
 
 const app = initializeApp(firebaseConfig);
