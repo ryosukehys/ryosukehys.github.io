@@ -38,6 +38,11 @@ export function getMyMemberId(): string {
   return id;
 }
 
+/** Override my member ID (for re-linking to an existing entry) */
+export function setMyMemberId(newId: string): void {
+  localStorage.setItem(MEMBER_ID_KEY, newId);
+}
+
 // --- Group operations ---
 
 /** Write my data to a group */
