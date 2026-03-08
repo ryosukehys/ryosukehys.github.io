@@ -846,7 +846,7 @@ function MapView({ myList, toggleMyList, toggleFavorite, toggleSakeWant, updateM
   );
 }
 
-function MyListView({ myList, toggleMyList, onBreweryTap }: { myList: MyListState; toggleMyList: (boothNum: string, list: 'want' | 'went') => void; onBreweryTap: (boothNum: string) => void }) {
+function MyListView({ myList, toggleMyList, onBreweryTap, groupMembers, activeGroupId }: { myList: MyListState; toggleMyList: (boothNum: string, list: 'want' | 'went') => void; onBreweryTap: (boothNum: string) => void; groupMembers: GroupMember[]; activeGroupId: string | null }) {
   const [activeTab, setActiveTab] = useState<'want' | 'went'>('want');
 
   const myListData = useMemo(() => {
@@ -954,6 +954,64 @@ function MyListView({ myList, toggleMyList, onBreweryTap }: { myList: MyListStat
               </div>
             </div>
           ))
+        )}
+
+        {/* Group members' want lists */}
+        {activeTab === 'want' && activeGroupId && groupMembers.length > 0 && (
+          <div className="mt-6">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-px flex-1 bg-gray-300"></div>
+              <span className="text-xs text-gray-500 font-medium shrink-0">メンバーの行きたいリスト</span>
+              <div className="h-px flex-1 bg-gray-300"></div>
+            </div>
+            {groupMembers.map((member, memberIdx) => {
+              const memberBoothData = member.wants.map(boothNum => {
+                const targetBoothNum = normalizeBooth(boothNum);
+                const boothInfo = boothData.find(b => normalizeBooth(b.booth_number) === targetBoothNum);
+                if (!boothInfo) return null;
+                return {
+                  boothNumber: String(boothInfo.booth_number),
+                  name: boothInfo.brewery_name || '',
+                  color: boothInfo.color_code || '#cccccc',
+                };
+              }).filter((x): x is NonNullable<typeof x> => x !== null);
+
+              const color = memberColors[memberIdx % memberColors.length];
+
+              return (
+                <div key={member.id} className="mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: color }}>
+                      {member.name.charAt(0)}
+                    </div>
+                    <span className="text-sm font-bold text-gray-700">{member.name}</span>
+                    <span className="text-xs text-gray-400">({memberBoothData.length}蔵)</span>
+                  </div>
+                  {memberBoothData.length === 0 ? (
+                    <p className="text-xs text-gray-400 pl-8">まだリストがありません</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2 pl-8">
+                      {memberBoothData.map((booth) => (
+                        <button
+                          key={booth.boothNumber}
+                          className="flex items-center gap-1.5 bg-white rounded-lg px-2.5 py-1.5 shadow-sm border border-gray-200/60 active:bg-gray-50"
+                          onClick={() => onBreweryTap(booth.boothNumber)}
+                        >
+                          <div
+                            className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs shrink-0"
+                            style={{ backgroundColor: booth.color }}
+                          >
+                            {booth.boothNumber}
+                          </div>
+                          <span className="text-xs font-medium text-gray-700">{booth.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>
@@ -1621,7 +1679,7 @@ export default function App() {
             )}
             {currentTab === 'list' && (
               <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0">
-                <MyListView myList={myList} toggleMyList={toggleMyList} onBreweryTap={navigateToBooth} />
+                <MyListView myList={myList} toggleMyList={toggleMyList} onBreweryTap={navigateToBooth} groupMembers={groupMembers} activeGroupId={activeGroupId} />
               </motion.div>
             )}
             {currentTab === 'favorites' && (
