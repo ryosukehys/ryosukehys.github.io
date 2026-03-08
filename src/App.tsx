@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { Search, Map as MapIcon, List, X, Heart, Check, Settings, Trash2, Send, Users, Copy, UserPlus, LogIn, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { boothData, sakeData, AppBrewery, AppSake } from './data';
-import { syncMyDataToGroup, subscribeToGroup, leaveGroup, getMyMemberId, isFirebaseConfigured, type FirebaseGroupMember } from './firebase';
+import { syncMyDataToGroup, subscribeToGroup, leaveGroup, getMyMemberId, isFirebaseConfigured, subscribeToConnectionState, type FirebaseGroupMember, type ConnectionStatus } from './firebase';
 
 // --- Types ---
 type Tag = '限定' | '有料' | '無料' | '新酒';
@@ -1167,7 +1167,7 @@ function SettingsView({ myList, clearMyList }: { myList: MyListState; clearMyLis
   );
 }
 
-function GroupView({ myList, groupMembers, activeGroupId, myName, joinGroup, leaveGroup: handleLeave, setMyName }: { myList: MyListState; groupMembers: GroupMember[]; activeGroupId: string | null; myName: string; joinGroup: (groupId: string, name: string) => boolean; leaveGroup: () => void; setMyName: (name: string) => void }) {
+function GroupView({ myList, groupMembers, activeGroupId, myName, joinGroup, leaveGroup: handleLeave, setMyName, connectionStatus, syncError }: { myList: MyListState; groupMembers: GroupMember[]; activeGroupId: string | null; myName: string; joinGroup: (groupId: string, name: string) => boolean; leaveGroup: () => void; setMyName: (name: string) => void; connectionStatus: ConnectionStatus; syncError: string | null }) {
   const [inputGroupId, setInputGroupId] = useState('');
   const [inputName, setInputName] = useState(myName);
   const [error, setError] = useState('');
@@ -1220,11 +1220,25 @@ function GroupView({ myList, groupMembers, activeGroupId, myName, joinGroup, lea
 
         {activeGroupId ? (
           <>
+            {/* Connection warning */}
+            {connectionStatus === 'disconnected' && (
+              <div className="bg-amber-50 rounded-xl px-4 py-3 border border-amber-200">
+                <p className="text-xs font-bold text-amber-700">サーバーに接続できません</p>
+                <p className="text-[10px] text-amber-600 mt-1">ネットワーク接続を確認してください。再接続されると自動で同期されます。</p>
+              </div>
+            )}
+            {syncError && (
+              <div className="bg-red-50 rounded-xl px-4 py-3 border border-red-200">
+                <p className="text-xs font-bold text-red-700">同期エラー</p>
+                <p className="text-[10px] text-red-600 mt-1">{syncError}</p>
+              </div>
+            )}
+
             {/* Connected state */}
-            <div className="bg-emerald-50 rounded-xl px-4 py-4 shadow-sm border border-emerald-200/60">
+            <div className={`${connectionStatus === 'connected' ? 'bg-emerald-50 border-emerald-200/60' : 'bg-gray-50 border-gray-200/60'} rounded-xl px-4 py-4 shadow-sm border`}>
               <div className="flex items-center gap-2 mb-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                <p className="text-sm font-bold text-emerald-700">グループに接続中</p>
+                <span className={`w-2.5 h-2.5 rounded-full ${connectionStatus === 'connected' ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
+                <p className={`text-sm font-bold ${connectionStatus === 'connected' ? 'text-emerald-700' : 'text-gray-500'}`}>{connectionStatus === 'connected' ? 'グループに接続中' : '接続待ち...'}</p>
               </div>
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2">
@@ -1375,21 +1389,34 @@ export default function App() {
   });
 
   const myMemberId = useMemo(() => getMyMemberId(), []);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   const saveGroup = (members: GroupMember[]) => {
     localStorage.setItem('sakenojin-group', JSON.stringify(members));
   };
 
+  // Monitor Firebase connection state
+  useEffect(() => {
+    if (!isFirebaseConfigured()) return;
+    return subscribeToConnectionState(setConnectionStatus);
+  }, []);
+
   // Sync my wants to Firebase when they change (if in a group)
   useEffect(() => {
     if (!activeGroupId || !myName || !isFirebaseConfigured()) return;
-    syncMyDataToGroup(activeGroupId, myMemberId, myName, Array.from(myList.want)).catch(() => {});
+    setSyncError(null);
+    syncMyDataToGroup(activeGroupId, myMemberId, myName, Array.from(myList.want)).catch((err) => {
+      setSyncError('データの同期に失敗しました: ' + (err?.message || '不明なエラー'));
+    });
   }, [activeGroupId, myMemberId, myName, myList.want]);
 
   // Subscribe to Firebase group updates
   useEffect(() => {
     if (!activeGroupId || !isFirebaseConfigured()) return;
+    setSyncError(null);
     const unsubscribe = subscribeToGroup(activeGroupId, (members) => {
+      setSyncError(null);
       const otherMembers: GroupMember[] = Object.entries(members)
         .filter(([id]) => id !== myMemberId)
         .map(([id, data]) => ({
@@ -1399,6 +1426,8 @@ export default function App() {
         }));
       setGroupMembers(otherMembers);
       saveGroup(otherMembers);
+    }, (err) => {
+      setSyncError('グループデータの取得に失敗しました: ' + (err?.message || '不明なエラー'));
     });
     return unsubscribe;
   }, [activeGroupId, myMemberId]);
@@ -1602,7 +1631,7 @@ export default function App() {
             )}
             {currentTab === 'group' && (
               <motion.div key="group" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0">
-                <GroupView myList={myList} groupMembers={groupMembers} activeGroupId={activeGroupId} myName={myName} joinGroup={joinGroup} leaveGroup={handleLeaveGroup} setMyName={(name: string) => { setMyNameState(name); localStorage.setItem('sakenojin-myname', name); }} />
+                <GroupView myList={myList} groupMembers={groupMembers} activeGroupId={activeGroupId} myName={myName} joinGroup={joinGroup} leaveGroup={handleLeaveGroup} setMyName={(name: string) => { setMyNameState(name); localStorage.setItem('sakenojin-myname', name); }} connectionStatus={connectionStatus} syncError={syncError} />
               </motion.div>
             )}
             {currentTab === 'settings' && (

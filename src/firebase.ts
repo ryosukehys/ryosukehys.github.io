@@ -1,6 +1,8 @@
 import { initializeApp } from 'firebase/app';
 import { getDatabase, ref, set, onValue, remove, off, type DatabaseReference } from 'firebase/database';
 
+export type ConnectionStatus = 'connected' | 'disconnected' | 'connecting';
+
 // ========================================
 // Firebase 設定
 // Firebase Console → プロジェクトの設定 → マイアプリ から取得した値を入力してください
@@ -56,14 +58,28 @@ export function syncMyDataToGroup(
 /** Subscribe to all members in a group. Returns an unsubscribe function. */
 export function subscribeToGroup(
   groupId: string,
-  callback: (members: Record<string, FirebaseGroupMember>) => void
+  callback: (members: Record<string, FirebaseGroupMember>) => void,
+  onError?: (error: Error) => void
 ): () => void {
   const groupRef: DatabaseReference = ref(db, `groups/${groupId}/members`);
   const unsubscribe = onValue(groupRef, (snapshot) => {
     const val = snapshot.val();
     callback(val || {});
+  }, (error) => {
+    onError?.(error);
   });
   return () => off(groupRef, 'value', unsubscribe);
+}
+
+/** Subscribe to Firebase connection state */
+export function subscribeToConnectionState(
+  callback: (status: ConnectionStatus) => void
+): () => void {
+  const connectedRef = ref(db, '.info/connected');
+  const unsubscribe = onValue(connectedRef, (snap) => {
+    callback(snap.val() === true ? 'connected' : 'disconnected');
+  });
+  return () => off(connectedRef, 'value', unsubscribe);
 }
 
 /** Remove myself from a group */
