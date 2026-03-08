@@ -28,6 +28,7 @@ export interface FirebaseGroupMember {
   favorites?: string[];
   sakeWants?: string[];
   memos?: Record<string, string>;
+  online?: boolean;
   updatedAt: number;
 }
 
@@ -64,6 +65,7 @@ export function syncMyDataToGroup(
     favorites: data.favorites,
     sakeWants: data.sakeWants,
     memos: data.memos,
+    online: true,
     updatedAt: Date.now()
   });
 }
@@ -101,16 +103,17 @@ export function leaveGroup(groupId: string, memberId: string): Promise<void> {
   return remove(memberRef);
 }
 
-/** Set up onDisconnect to auto-remove my data when connection is lost */
+/** Set up onDisconnect to mark member as offline (but keep data) */
 export function setupOnDisconnect(groupId: string, memberId: string): void {
-  const memberRef = ref(db, `groups/${groupId}/members/${memberId}`);
-  onDisconnect(memberRef).remove();
+  const onlineRef = ref(db, `groups/${groupId}/members/${memberId}/online`);
+  set(onlineRef, true);
+  onDisconnect(onlineRef).set(false);
 }
 
 /** Cancel onDisconnect (e.g. when manually leaving) */
 export function cancelOnDisconnect(groupId: string, memberId: string): void {
-  const memberRef = ref(db, `groups/${groupId}/members/${memberId}`);
-  onDisconnect(memberRef).cancel();
+  const onlineRef = ref(db, `groups/${groupId}/members/${memberId}/online`);
+  onDisconnect(onlineRef).cancel();
 }
 
 /** Check if Firebase is configured (not placeholder) */
