@@ -846,7 +846,7 @@ function MapView({ myList, toggleMyList, toggleFavorite, toggleSakeWant, updateM
   );
 }
 
-function MyListView({ myList, toggleMyList, onBreweryTap, groupMembers, activeGroupId }: { myList: MyListState; toggleMyList: (boothNum: string, list: 'want' | 'went') => void; onBreweryTap: (boothNum: string) => void; groupMembers: GroupMember[]; activeGroupId: string | null }) {
+function MyListView({ myList, toggleMyList, onBreweryTap, groupMembers, activeGroupId, updateMemo }: { myList: MyListState; toggleMyList: (boothNum: string, list: 'want' | 'went') => void; onBreweryTap: (boothNum: string) => void; groupMembers: GroupMember[]; activeGroupId: string | null; updateMemo: (key: string, text: string) => void }) {
   const [activeTab, setActiveTab] = useState<'want' | 'went'>('want');
 
   const myListData = useMemo(() => {
@@ -951,6 +951,17 @@ function MyListView({ myList, toggleMyList, onBreweryTap, groupMembers, activeGr
                   </div>
                   );
                 })}
+              </div>
+              {/* Booth memo */}
+              <div className="pl-[52px] mt-2" onClick={(e) => e.stopPropagation()}>
+                <textarea
+                  id={`booth-memo-${item.boothNumber}`}
+                  className="w-full text-xs bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 placeholder-gray-300 focus:outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300 resize-none"
+                  rows={1}
+                  placeholder="メモを追加..."
+                  defaultValue={myList.memos[`booth:${item.boothNumber}`] || ''}
+                  onBlur={(e) => updateMemo(`booth:${item.boothNumber}`, e.target.value)}
+                />
               </div>
             </div>
           ))
@@ -1710,7 +1721,7 @@ export default function App() {
             )}
             {currentTab === 'list' && (
               <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0">
-                <MyListView myList={myList} toggleMyList={toggleMyList} onBreweryTap={navigateToBooth} groupMembers={groupMembers} activeGroupId={activeGroupId} />
+                <MyListView myList={myList} toggleMyList={toggleMyList} onBreweryTap={navigateToBooth} groupMembers={groupMembers} activeGroupId={activeGroupId} updateMemo={updateMemo} />
               </motion.div>
             )}
             {currentTab === 'favorites' && (
