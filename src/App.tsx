@@ -26,6 +26,7 @@ interface GroupMember {
   id: string;
   name: string;
   wants: string[]; // booth numbers
+  memos?: Record<string, string>;
 }
 
 const memberColors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316'];
@@ -860,6 +861,19 @@ function MapView({ myList, toggleMyList, toggleFavorite, toggleSakeWant, updateM
                     <Send className="w-3.5 h-3.5" />
                   </button>
                 </div>
+                {/* Other members' memos for this booth */}
+                {groupMembers.filter(m => m.memos?.[`booth:${selectedBrewery.boothNumber}`]).length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {groupMembers.filter(m => m.memos?.[`booth:${selectedBrewery.boothNumber}`]).map((m, i) => (
+                      <div key={m.id} className="flex items-start gap-1.5">
+                        <span className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[8px] font-bold shrink-0 mt-0.5" style={{ backgroundColor: memberColors[groupMembers.indexOf(m) % memberColors.length] }}>
+                          {m.name.charAt(0)}
+                        </span>
+                        <p className="text-[11px] text-gray-500"><span className="font-medium text-gray-600">{m.name}:</span> {m.memos![`booth:${selectedBrewery.boothNumber}`]}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </motion.div>
           </>
@@ -1024,22 +1038,28 @@ function MyListView({ myList, toggleMyList, onBreweryTap, groupMembers, activeGr
                   {memberBoothData.length === 0 ? (
                     <p className="text-xs text-gray-400 pl-8">まだリストがありません</p>
                   ) : (
-                    <div className="flex flex-wrap gap-2 pl-8">
-                      {memberBoothData.map((booth) => (
-                        <button
-                          key={booth.boothNumber}
-                          className="flex items-center gap-1.5 bg-white rounded-lg px-2.5 py-1.5 shadow-sm border border-gray-200/60 active:bg-gray-50"
-                          onClick={() => onBreweryTap(booth.boothNumber)}
-                        >
-                          <div
-                            className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs shrink-0"
-                            style={{ backgroundColor: booth.color }}
+                    <div className="space-y-1.5 pl-8">
+                      {memberBoothData.map((booth) => {
+                        const memo = member.memos?.[`booth:${booth.boothNumber}`];
+                        return (
+                          <button
+                            key={booth.boothNumber}
+                            className="flex items-center gap-1.5 bg-white rounded-lg px-2.5 py-1.5 shadow-sm border border-gray-200/60 active:bg-gray-50 w-full text-left"
+                            onClick={() => onBreweryTap(booth.boothNumber)}
                           >
-                            {booth.boothNumber}
-                          </div>
-                          <span className="text-xs font-medium text-gray-700">{booth.name}</span>
-                        </button>
-                      ))}
+                            <div
+                              className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs shrink-0"
+                              style={{ backgroundColor: booth.color }}
+                            >
+                              {booth.boothNumber}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-xs font-medium text-gray-700">{booth.name}</span>
+                              {memo && <p className="text-[10px] text-gray-400 truncate">{memo}</p>}
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -1565,7 +1585,8 @@ export default function App() {
         .map(([id, data]) => ({
           id,
           name: (data as FirebaseGroupMember).name,
-          wants: (data as FirebaseGroupMember).wants || []
+          wants: (data as FirebaseGroupMember).wants || [],
+          memos: (data as FirebaseGroupMember).memos || {},
         }));
       setGroupMembers(otherMembers);
       saveGroup(otherMembers);
