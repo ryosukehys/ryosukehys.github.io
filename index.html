@@ -74,12 +74,17 @@
       margin-left: 0.5rem;
       vertical-align: middle;
     }
+    .badge-wip {
+      background: #fff8c5;
+      color: #9a6700;
+    }
     footer {
       text-align: center;
       padding: 2rem 1rem;
       color: #8b949e;
       font-size: 0.8rem;
     }
+    footer p { margin-top: 0.25rem; }
     footer a { color: #0969da; text-decoration: none; }
   </style>
 </head>
@@ -90,7 +95,19 @@
   </header>
 
   <main>
-    <h2>Apps</h2>
+    <h2>iOS Apps</h2>
+    <div class="projects">
+      <a class="project-card" href="https://apps.apple.com/us/app/%E7%B4%B0%E3%81%8B%E3%81%8F%E3%82%84%E3%82%8A%E3%81%9F%E3%81%84%E4%BA%BA%E3%81%AE%E3%81%9F%E3%82%81%E3%81%AE%E5%AE%B6%E8%A8%88%E7%B0%BF/id6759987999">
+        <h3>細かくやりたい人のための家計簿 <span class="badge">App Store</span></h3>
+        <p>細かく記録・管理したい人向けの家計簿アプリ</p>
+      </a>
+      <div class="project-card">
+        <h3>iOSアプリ開発中 <span class="badge badge-wip">In Development</span></h3>
+        <p>カレンダーアプリなど、新しいアプリを開発中です</p>
+      </div>
+    </div>
+
+    <h2>Web Apps</h2>
     <div class="projects">
       <a class="project-card" href="https://ryosukehys.github.io/sakenojin2026/">
         <h3>sakenojin2026 <span class="badge">GitHub Pages</span></h3>
@@ -98,10 +115,19 @@
         <p class="fork-info">Forked from <span class="fork-link">tsurezure-lab/niigata-sake-no-jin-26</span></p>
       </a>
     </div>
+
+    <h2>Contact</h2>
+    <div class="projects">
+      <a class="project-card" href="https://forms.gle/v4TbPbfyFnyu8tgf6">
+        <h3>お問い合わせ・フィードバック</h3>
+        <p>アプリへのご意見・ご要望・バグ報告など、お気軽にどうぞ</p>
+      </a>
+    </div>
   </main>
 
   <footer>
-    <a href="https://github.com/ryosukehys">github.com/ryosukehys</a>
+    <p>&copy; 2026 ryosukehys</p>
+    <p><a href="https://github.com/ryosukehys">github.com/ryosukehys</a></p>
   </footer>
 </body>
 </html>
