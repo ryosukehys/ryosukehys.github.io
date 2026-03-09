@@ -6,7 +6,7 @@
 
 ### sakenojin2026
 
-にいがた酒の陣 2026 のアプリです。
+にいがた酒の陣 2026 のアプリです。フォーク元にグループ共有機能を追加しています。
 
 - **デプロイ先**: https://ryosukehys.github.io/sakenojin2026/
 - **フォーク元**: [tsurezure-lab/niigata-sake-no-jin-26](https://github.com/tsurezure-lab/niigata-sake-no-jin-26)
