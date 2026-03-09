@@ -5,7 +5,7 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(({mode}) => {
   return {
-    base: '/niigata-sake-no-jin-26/',
+    base: '/sakenojin2026/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
