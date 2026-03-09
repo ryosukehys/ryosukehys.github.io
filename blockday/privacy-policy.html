@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Privacy Policy - Blockday</title>
+  <title>プライバシーポリシー / Privacy Policy - Blockday</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -22,9 +22,32 @@
     header p { margin-top: 0.25rem; color: #8b949e; font-size: 0.9rem; }
     header a { color: #8b949e; text-decoration: none; font-size: 0.85rem; }
     header a:hover { color: #fff; }
+    .lang-switch {
+      text-align: center;
+      margin: 1.5rem auto 0;
+      max-width: 720px;
+      padding: 0 1rem;
+    }
+    .lang-switch button {
+      padding: 0.4rem 1rem;
+      margin: 0 0.25rem;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      background: #fff;
+      color: #24292f;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .lang-switch button:hover { border-color: #0969da; color: #0969da; }
+    .lang-switch button.active {
+      background: #0969da;
+      color: #fff;
+      border-color: #0969da;
+    }
     main {
       max-width: 720px;
-      margin: 2rem auto;
+      margin: 1rem auto 2rem;
       padding: 0 1rem;
     }
     .content {
@@ -60,16 +83,77 @@
       font-size: 0.8rem;
     }
     footer a { color: #0969da; text-decoration: none; }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
   <header>
-    <h1>Blockday - Privacy Policy</h1>
-    <p><a href="/">&larr; Back to Home</a></p>
+    <h1>Blockday - <span id="header-title-ja">プライバシーポリシー</span><span id="header-title-en" class="hidden">Privacy Policy</span></h1>
+    <p><a href="/" id="back-ja">&larr; ホームに戻る</a><a href="/" id="back-en" class="hidden">&larr; Back to Home</a></p>
   </header>
 
+  <div class="lang-switch">
+    <button id="btn-ja" class="active" onclick="switchLang('ja')">日本語</button>
+    <button id="btn-en" onclick="switchLang('en')">English</button>
+  </div>
+
   <main>
-    <div class="content">
+    <!-- 日本語 -->
+    <div id="content-ja" class="content">
+      <h2>プライバシーポリシー</h2>
+      <p>このプライバシーポリシーは、モバイルデバイス向けに商用サービスとして作成されたBlockdayアプリ（以下「本アプリケーション」）に適用されます。本サービスは「現状有姿」での提供を意図しています。</p>
+
+      <h2>情報の収集と利用</h2>
+      <p>本アプリケーションは、ダウンロードおよび使用時に情報を収集します。収集される情報には以下のようなものが含まれる場合があります。</p>
+      <ul>
+        <li>お使いのデバイスのインターネットプロトコルアドレス（IPアドレス）</li>
+        <li>本アプリケーション内で閲覧したページ、閲覧日時、各ページの閲覧時間</li>
+        <li>本アプリケーションの利用時間</li>
+        <li>モバイルデバイスで使用しているオペレーティングシステム</li>
+      </ul>
+      <p>本アプリケーションは、モバイルデバイスの正確な位置情報を収集しません。</p>
+      <p>本アプリケーションは、データの処理や機能の提供に人工知能（AI）技術を使用していません。</p>
+      <p>サービス提供者は、重要な情報、必要な通知、およびマーケティングプロモーションを提供するために、お客様に連絡する場合があります。</p>
+      <p>より良い体験のために、本アプリケーションの使用中に、サービス提供者が特定の個人を識別できる情報の提供を求める場合があります。サービス提供者が要求した情報は保持され、本プライバシーポリシーに記載された方法で使用されます。</p>
+
+      <h2>第三者によるアクセス</h2>
+      <p>集約され匿名化されたデータのみが、本アプリケーションおよびサービスの改善を目的として、定期的に外部サービスに送信されます。サービス提供者は、本プライバシーポリシーに記載された方法で、お客様の情報を第三者と共有する場合があります。</p>
+      <p>サービス提供者は、ユーザー提供情報および自動収集情報を以下の場合に開示することがあります。</p>
+      <ul>
+        <li>召喚状その他類似の法的手続きに従う場合など、法律で求められる場合</li>
+        <li>自らの権利を保護し、お客様または他者の安全を守り、詐欺を調査し、または政府の要請に応じるために開示が必要であると誠実に判断した場合</li>
+        <li>サービス提供者の代理として業務を行い、開示された情報を独立して利用せず、本プライバシーポリシーに定められた規則の遵守に同意した信頼できるサービスプロバイダーとの間で共有する場合</li>
+      </ul>
+
+      <h2>オプトアウトの権利</h2>
+      <p>本アプリケーションをアンインストールすることで、すべての情報収集を簡単に停止できます。モバイルデバイスまたはモバイルアプリケーションマーケットプレイスで利用可能な標準のアンインストール手順をご利用ください。</p>
+
+      <h2>データ保持ポリシー</h2>
+      <p>サービス提供者は、お客様が本アプリケーションを使用している間、およびその後の合理的な期間、ユーザー提供データを保持します。本アプリケーションを通じて提供されたデータの削除をご希望の場合は、<a href="mailto:hys.iroha@gmail.com">hys.iroha@gmail.com</a> までご連絡ください。合理的な期間内に対応いたします。</p>
+
+      <h2>子どもに関する方針</h2>
+      <p>サービス提供者は、本アプリケーションを使用して13歳未満の子どもからデータを意図的に収集したり、マーケティングを行ったりすることはありません。</p>
+      <p>サービス提供者は、子どもから個人を識別できる情報を意図的に収集しません。すべての子どもに対し、本アプリケーションおよび/またはサービスを通じて個人を識別できる情報を送信しないよう奨励しています。保護者の方には、お子様のインターネット利用を監視し、許可なく本アプリケーションおよび/またはサービスを通じて個人を識別できる情報を提供しないようお子様に指導いただくことで、本ポリシーの遵守にご協力いただくようお願いいたします。子どもが本アプリケーションおよび/またはサービスを通じて個人を識別できる情報を提供したと思われる場合は、サービス提供者（<a href="mailto:hys.iroha@gmail.com">hys.iroha@gmail.com</a>）までご連絡ください。必要な措置を講じます。また、お住まいの国で個人を識別できる情報の処理に同意するには、16歳以上である必要があります（一部の国では、保護者が代理で同意することを認める場合があります）。</p>
+
+      <h2>セキュリティ</h2>
+      <p>サービス提供者は、お客様の情報の機密性を保護することに努めています。サービス提供者は、処理および保持する情報を保護するために、物理的、電子的、および手続き上の安全対策を講じています。</p>
+
+      <h2>変更について</h2>
+      <p>本プライバシーポリシーは、理由の如何を問わず随時更新される場合があります。サービス提供者は、本ページに新しいプライバシーポリシーを掲載することにより、変更をお知らせします。変更がないか定期的に本プライバシーポリシーをご確認ください。継続的な利用は、すべての変更への同意とみなされます。</p>
+      <p>本プライバシーポリシーは2026年3月9日より有効です。</p>
+
+      <h2>お客様の同意</h2>
+      <p>本アプリケーションを使用することにより、お客様は現在および今後改定される本プライバシーポリシーに記載された方法での情報の処理に同意するものとします。</p>
+
+      <h2>お問い合わせ</h2>
+      <p>本アプリケーションのご利用中のプライバシーに関するご質問、またはその他のご質問がございましたら、サービス提供者まで <a href="mailto:hys.iroha@gmail.com">hys.iroha@gmail.com</a> にてお問い合わせください。</p>
+
+      <hr>
+      <p>本プライバシーポリシーページは <a href="https://app-privacy-policy-generator.nisrulz.com/">App Privacy Policy Generator</a> により生成されました。</p>
+    </div>
+
+    <!-- English -->
+    <div id="content-en" class="content hidden">
       <h2>Privacy Policy</h2>
       <p>This privacy policy applies to the Blockday app (hereby referred to as "Application") for mobile devices that was created by (hereby referred to as "Service Provider") as a Commercial service. This service is intended for use "AS IS".</p>
 
@@ -127,5 +211,24 @@
     <p>&copy; 2026 ryosukehys</p>
     <p><a href="https://github.com/ryosukehys">github.com/ryosukehys</a></p>
   </footer>
+
+  <script>
+    function switchLang(lang) {
+      var jaElements = ['content-ja', 'header-title-ja', 'back-ja'];
+      var enElements = ['content-en', 'header-title-en', 'back-en'];
+      var showJa = lang === 'ja';
+
+      jaElements.forEach(function(id) {
+        document.getElementById(id).classList.toggle('hidden', !showJa);
+      });
+      enElements.forEach(function(id) {
+        document.getElementById(id).classList.toggle('hidden', showJa);
+      });
+
+      document.getElementById('btn-ja').classList.toggle('active', showJa);
+      document.getElementById('btn-en').classList.toggle('active', !showJa);
+      document.documentElement.lang = lang;
+    }
+  </script>
 </body>
 </html>
