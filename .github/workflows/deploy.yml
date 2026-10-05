@@ -23,6 +23,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      # 4区道路リスク Web版の Google Maps APIキーを、公開するファイルにだけ書き込む（リポジトリには残らない）。
+      # Secrets に MAPCARALART_WEB_GOOGLE_MAPS_KEY がなければ何もしない（国土地理院の地図で動く）。
+      - name: Inject Google Maps API key for mapCarAlart web
+        env:
+          KEY: ${{ secrets.MAPCARALART_WEB_GOOGLE_MAPS_KEY }}
+        run: |
+          if [ -n "$KEY" ]; then
+            node -e 'require("fs").writeFileSync("mapCarAlart/web/config.js", "window.ROADRISK_CONFIG = " + JSON.stringify({ googleMapsApiKey: process.env.KEY }) + ";\n")'
+            echo "API key injected"
+          else
+            echo "No API key secret; the web app will use the GSI map"
+          fi
       - uses: actions/upload-pages-artifact@v3
         with:
           path: '.'

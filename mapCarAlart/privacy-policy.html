@@ -109,7 +109,7 @@
     <!-- 日本語 -->
     <div id="content-ja" class="content">
       <h2>プライバシーポリシー</h2>
-      <p>本ポリシーは、iOSアプリ「4区道路リスク」（練馬・板橋・北・豊島の道路要注意度マップ。以下「本アプリ」）における利用者の情報の取り扱いを説明するものです。本アプリの開発者（以下「開発者」）は、必要最小限の情報だけを、利用者の操作に応じて扱います。</p>
+      <p>本ポリシーは、iOSアプリ「4区道路リスク」（練馬・板橋・北・豊島の道路要注意度マップ。以下「本アプリ」）と、そのWeb版（第8項）における利用者の情報の取り扱いを説明するものです。本アプリの開発者（以下「開発者」）は、必要最小限の情報だけを、利用者の操作に応じて扱います。</p>
       <div class="summary">
         <ul>
           <li><strong>開発者は、利用者の個人情報を収集しません。</strong>開発者が運営するサーバーはなく、アカウント登録・広告・利用状況の分析ツールもありません。</li>
@@ -179,14 +179,25 @@
       <p>本ポリシーは、機能の追加や法令の変更などに応じて改定することがあります。改定した場合はこのページに掲載し、下記の日付を更新します。</p>
       <p>本プライバシーポリシーは2026年10月5日より有効です。</p>
 
-      <h2>8. お問い合わせ</h2>
+      <h2>8. Web版（ブラウザで使う版）について</h2>
+      <p>本アプリと同じ機能のWeb版を <a href="https://ryosukehys.github.io/mapCarAlart/web/">https://ryosukehys.github.io/mapCarAlart/web/</a> で公開しています。Web版での情報の取り扱いは、上記に加えて次のとおりです。</p>
+      <ul>
+        <li>道路データの読み込みと要注意度の計算は、すべて利用者のブラウザの中で行います。開発者のサーバーへの送信、アカウント登録、広告、アクセス解析はありません。ページは GitHub Pages（GitHub, Inc.）から配信され、配信に伴いGitHubがIPアドレスなどのアクセス記録を扱う場合があります。</li>
+        <li>位置情報：現在地ボタンを押したときに、ブラウザが位置情報の許可を求めます。現在地は地図の表示にだけ使い、保存・送信しません（地図の表示に伴い、表示している地図の範囲が地図サービスへ送られます）。許可はブラウザの設定でいつでも取り消せます。</li>
+        <li>ブラウザへの保存：選んだ区・色分け・車両・地図の種類を、次に開いたときのために、ブラウザの保存領域（localStorage）に保存します。個人に関する情報は含みません。ブラウザのサイトデータを消すと削除されます。</li>
+        <li>APIキー：Web版で使う Google Maps Platform の APIキーは開発者のもので、ページの中に含まれます（使えるサイトとAPIを制限しています）。利用者がAPIキーを入力することはありません。</li>
+        <li>外部サービス：Google（Maps JavaScript API による地図の表示、Maps Embed API による区間カルテのストリートビュー、「Googleストリートビューで開く」によるGoogleマップの表示）と、国土地理院（Googleの地図が使えないときの地図タイル「地理院タイル」）と通信します。送られる主な情報は、表示している地図の範囲、ストリートビューを求めた地点の座標と道の向き、ブラウザの通信に伴う技術的な情報（IPアドレス、ブラウザの種類、参照元のページなど）です。Googleがクッキー等を利用する場合があります。</li>
+        <li>Web版には、住所検索と音声入力の機能はありません。</li>
+      </ul>
+
+      <h2>9. お問い合わせ</h2>
       <p>本ポリシーや本アプリの情報の取り扱いに関するお問い合わせは、<a href="mailto:hys.iroha@gmail.com">hys.iroha@gmail.com</a> までお願いします。</p>
     </div>
 
     <!-- English -->
     <div id="content-en" class="content hidden">
       <h2>Privacy Policy</h2>
-      <p>This policy explains how the iOS app "4区道路リスク" (a road caution map for Nerima, Itabashi, Kita and Toshima wards in Tokyo; the "Application") handles information. The developer of the Application (the "Developer") handles only the minimum information needed, and only in response to your actions.</p>
+      <p>This policy explains how the iOS app "4区道路リスク" (a road caution map for Nerima, Itabashi, Kita and Toshima wards in Tokyo; the "Application") and its web version (Section 8) handle information. The developer of the Application (the "Developer") handles only the minimum information needed, and only in response to your actions.</p>
       <div class="summary">
         <ul>
           <li><strong>The Developer does not collect your personal information.</strong> There is no server operated by the Developer, no account registration, no advertising and no usage analytics.</li>
@@ -256,7 +267,18 @@
       <p>This policy may be updated when features are added or laws change. Updates will be posted on this page with a new effective date.</p>
       <p>This privacy policy is effective as of 2026-10-05.</p>
 
-      <h2>8. Contact Us</h2>
+      <h2>8. Web Version</h2>
+      <p>A web version with the same features as the Application is available at <a href="https://ryosukehys.github.io/mapCarAlart/web/">https://ryosukehys.github.io/mapCarAlart/web/</a>. In addition to the above, the web version handles information as follows.</p>
+      <ul>
+        <li>Loading the road data and calculating caution levels are done entirely in your browser. There is no sending to a server operated by the Developer, no account registration, no advertising and no analytics. The pages are delivered by GitHub Pages (GitHub, Inc.), and GitHub may handle access records such as IP addresses as part of delivering them.</li>
+        <li>Location: your browser asks for location permission when you tap the current location button. Your location is used only to show it on the map and is not stored or sent (the visible map area is sent to the map service as part of showing the map). You can revoke the permission at any time in your browser settings.</li>
+        <li>Browser storage: the selected ward, color mode, vehicle and map type are saved in your browser's storage (localStorage) for your next visit. They contain no personal information and are deleted when you clear the site data in your browser.</li>
+        <li>API key: the Google Maps Platform API key used by the web version belongs to the Developer and is included in the page (restricted to specific sites and APIs). You never enter an API key.</li>
+        <li>External services: Google (map display with the Maps JavaScript API, Street View in the road card with the Maps Embed API, and Google Maps when you tap "Open in Google Street View") and GSI (map tiles, "GSI Tiles", when Google's map is not available). The main information sent is the visible map area, the coordinates and road direction of the place for Street View, and technical information sent as part of browser communication (IP address, browser type, referring page, etc.). Google may use cookies or similar technologies.</li>
+        <li>The web version has no address search or voice input.</li>
+      </ul>
+
+      <h2>9. Contact Us</h2>
       <p>For questions about this policy or how the Application handles information, please contact <a href="mailto:hys.iroha@gmail.com">hys.iroha@gmail.com</a>.</p>
     </div>
   </main>
