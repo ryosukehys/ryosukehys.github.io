@@ -15,6 +15,9 @@
 <body>
   <header class="topbar">
     <div class="topbar-row">
+      <a class="home" href="/" aria-label="ホームページに戻る" title="ホームページに戻る">
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3 2 12h3v8h6v-6h2v6h6v-8h3z"/></svg>
+      </a>
       <h1>4区道路リスク</h1>
       <label class="visually-hidden" for="ward">区</label>
       <select id="ward"></select>
@@ -24,6 +27,10 @@
       <label class="visually-hidden" for="vehicle">車両</label>
       <select id="vehicle"></select>
     </div>
+    <form id="search" class="search" role="search">
+      <input id="search-input" type="search" placeholder="住所・地名で探す（例：豊玉北6-12）" autocomplete="off" enterkeyhint="search" aria-label="住所・地名で探す">
+      <button type="submit">検索</button>
+    </form>
     <p class="notice">
       <span>道幅は5段階の区分（実測値ではない）。最終判断は現地確認で。</span>
       <button id="btn-credits" type="button" class="link">凡例・出典</button>
@@ -32,6 +39,7 @@
 
   <div class="map-wrap">
     <main id="map" aria-label="地図"></main>
+    <div id="results" class="results" hidden aria-live="polite"></div>
     <div id="thinned" class="chip" hidden>縮小表示：要注意の区分だけ</div>
     <div class="fab">
       <button id="btn-locate" type="button" aria-label="現在地へ移動" title="現在地">
@@ -85,8 +93,9 @@
       <li>一方通行・名称・区界は © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>（ODbL）</li>
       <li>データ取得日: 2026年10月4日以前（リポジトリ登録日。元データの正確な取得日はファイルに未記録）</li>
       <li>地図は Google Maps Platform、または<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a>（淡色地図）を利用しています。</li>
+      <li>住所検索は、Google の地図のときは Google（Geocoding）、それ以外または Google が使えないときは国土地理院の住所検索（協力：東大CSIS）を利用しています。</li>
     </ul>
-    <p class="small"><a href="../privacy-policy.html">プライバシーポリシー</a></p>
+    <p class="small"><a href="../privacy-policy.html">プライバシーポリシー</a> ・ <a href="/">ホームページに戻る</a></p>
   </dialog>
 
   <div id="sv-full" class="sv-full" hidden role="dialog" aria-label="ストリートビュー（全画面）">

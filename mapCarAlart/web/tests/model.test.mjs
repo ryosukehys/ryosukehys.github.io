@@ -305,3 +305,55 @@ test('タイル用の格子は実データの区間を漏らさない', () => {
   const hit = new M.SegmentIndex(net).nearest(net, local.x, local.y, 200);
   assert.ok(hit && segs.has(hit.segment));
 });
+
+// MARK: 住所検索
+
+test('検索の言葉に区や都の名前を補う', () => {
+  assert.equal(M.googleSearchQuery(net, '豊玉北6-12-1', 0), '東京都練馬区 豊玉北6-12-1');
+  assert.equal(M.googleSearchQuery(net, '練馬区豊玉北6-12-1', 0), '練馬区豊玉北6-12-1');
+  assert.equal(M.googleSearchQuery(net, '池袋駅', null), '東京都 池袋駅');
+  assert.equal(M.googleSearchQuery(net, '東京都豊島区南池袋', null), '東京都豊島区南池袋');
+  assert.equal(M.gsiSearchQuery(net, '豊玉北6丁目', 0), '練馬区豊玉北6丁目');
+  assert.equal(M.gsiSearchQuery(net, '練馬区豊玉北6丁目', 0), '練馬区豊玉北6丁目');
+  assert.equal(M.gsiSearchQuery(net, '豊玉北6丁目', null), '豊玉北6丁目');
+});
+
+test('国土地理院の住所検索の URL と応答', () => {
+  assert.equal(M.gsiSearchURL('練馬区豊玉北6丁目'),
+    'https://msearch.gsi.go.jp/address-search/AddressSearch?q=%E7%B7%B4%E9%A6%AC%E5%8C%BA%E8%B1%8A%E7%8E%89%E5%8C%976%E4%B8%81%E7%9B%AE');
+  // 地理院地図と同じ形式：GeoJSON の Feature の配列で、座標は [経度, 緯度]
+  const places = M.parseGSISearch([
+    { geometry: { coordinates: [139.651703, 35.735588], type: 'Point' }, type: 'Feature', properties: { addressCode: '13120', title: '東京都練馬区豊玉北六丁目' } },
+    { geometry: { coordinates: [], type: 'Point' }, type: 'Feature', properties: { title: '座標なし' } },
+  ]);
+  assert.deepEqual(places, [{ name: '東京都練馬区豊玉北六丁目', lat: 35.735588, lng: 139.651703 }]);
+  assert.deepEqual(M.parseGSISearch([]), []);
+  assert.throws(() => M.parseGSISearch({ error: 'x' }));
+});
+
+test('Google の住所から国名と郵便番号を除く', () => {
+  assert.equal(M.googleDisplayName('日本、〒176-0012 東京都練馬区豊玉北６丁目１２−１'), '東京都練馬区豊玉北６丁目１２−１');
+  assert.equal(M.googleDisplayName('東京都豊島区'), '東京都豊島区');
+});
+
+test('検索結果は表示中の区の中だけ', () => {
+  const places = [
+    { name: '練馬区役所', lat: 35.7356, lng: 139.6517 },
+    { name: '豊島区役所', lat: 35.7326, lng: 139.7158 },
+    { name: '新宿駅', lat: 35.69, lng: 139.7004 },
+  ];
+  assert.deepEqual(M.placesInArea(net, places, null).map((p) => [p.name, p.wardName]), [['練馬区役所', '練馬区'], ['豊島区役所', '豊島区']]);
+  assert.deepEqual(M.placesInArea(net, places, 3).map((p) => p.name), ['豊島区役所']);
+  const many = Array.from({ length: 30 }, () => places[0]);
+  assert.equal(M.placesInArea(net, many, null).length, M.SEARCH_LIMIT);
+});
+
+test('検索地点から80m以内の車道を選ぶ', () => {
+  const index = new M.SegmentIndex(net);
+  const hit = M.snapToRoadway(net, index, 35.7356, 139.6517, 0);
+  assert.ok(hit && hit.distance <= M.SEARCH_SNAP_METERS);
+  assert.ok(net.t[hit.segment] < 2);
+  assert.equal(net.ward[hit.segment], 0);
+  // 新宿駅は4区の外。練馬区に絞れば見つからない
+  assert.equal(M.snapToRoadway(net, index, 35.69, 139.7004, 0), null);
+});

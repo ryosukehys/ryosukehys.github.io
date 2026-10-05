@@ -25,6 +25,7 @@ const state = {
   vehicle: M.DEFAULT_VEHICLE,
   engine: API_KEY ? 'google' : 'gsi',
   selection: null, // { segment, lat, lng, heading }
+  pin: null, // 住所検索で選んだ地点 { lat, lng, name }
   idsCache: new Map(),
   map: null,
 };
@@ -111,6 +112,16 @@ function userElement() {
   return el;
 }
 
+/** 住所検索で選んだ地点の印 */
+function pinElement(title) {
+  const el = document.createElement('div');
+  el.className = 'search-pin';
+  el.setAttribute('role', 'img');
+  el.setAttribute('aria-label', `検索した地点：${title}`);
+  el.title = title;
+  return el;
+}
+
 // MARK: - 国土地理院の地図（Leaflet）
 
 let leafletLoading = null;
@@ -152,6 +163,7 @@ class GsiMap {
     this.selectionLine = null;
     this.viewpoint = null;
     this.user = null;
+    this.pin = null;
   }
 
   fit(b) { this.map.fitBounds([[b.south, b.west], [b.north, b.east]], { animate: false }); }
@@ -200,6 +212,20 @@ class GsiMap {
     }).addTo(this.map);
     this.map.setView([lat, lng], Math.max(this.map.getZoom(), 16));
   }
+
+  showPin(pin) {
+    const L = window.L;
+    if (this.pin) this.map.removeLayer(this.pin);
+    this.pin = null;
+    if (!pin) return;
+    this.pin = L.marker([pin.lat, pin.lng], {
+      icon: L.divIcon({ html: pinElement(pin.name), className: 'pin-icon', iconSize: [22, 22], iconAnchor: [11, 11] }),
+      interactive: false,
+      keyboard: false,
+    }).addTo(this.map);
+  }
+
+  setView(lat, lng, zoom) { this.map.setView([lat, lng], zoom, { animate: false }); }
 
   /** 画面（ビューポート）上の位置 */
   clientPoint(lat, lng) {
@@ -290,6 +316,7 @@ class GoogleMap {
     this.selectionLine = null;
     this.viewpoint = null;
     this.user = null;
+    this.pin = null;
   }
 
   fit(b) { this.map.fitBounds({ south: b.south, west: b.west, north: b.north, east: b.east }, 0); }
@@ -343,6 +370,21 @@ class GoogleMap {
     this.user.setMap(this.map);
     this.map.setZoom(Math.max(this.zoom(), 16));
     this.map.panTo({ lat, lng });
+  }
+
+  showPin(pin) {
+    this.pin?.setMap(null);
+    this.pin = null;
+    if (!pin) return;
+    const el = pinElement(pin.name);
+    el.style.transform = 'translate(-50%, -50%)';
+    this.pin = new this.HtmlMarker(el, { lat: pin.lat, lng: pin.lng });
+    this.pin.setMap(this.map);
+  }
+
+  setView(lat, lng, zoom) {
+    this.map.setZoom(zoom);
+    this.map.setCenter({ lat, lng });
   }
 
   clientPoint(lat, lng) {
@@ -399,6 +441,7 @@ async function createMap() {
   state.map.fit(M.wardBounds(state.net, state.ward));
   state.map.setRoads(roadStyle());
   if (state.selection) state.map.setSelection(state.selection, M.segmentLatLngs(state.net, state.selection.segment));
+  state.map.showPin(state.pin);
   updateThinnedChip(Math.round(state.map.zoom()));
   document.body.dataset.engine = state.engine;
   renderLegend();
@@ -486,6 +529,145 @@ function locate() {
   );
 }
 
+// MARK: - 住所検索
+
+const search = { seq: 0, noticedFallback: false };
+
+const GEOCODER_MESSAGES = {
+  OVER_QUERY_LIMIT: '今日の検索回数の上限に達しました',
+  REQUEST_DENIED: 'APIキーで住所検索（Geocoding API）が許可されていません',
+  INVALID_REQUEST: '検索の言葉が正しくありません',
+  UNKNOWN_ERROR: 'Google のサーバーでエラーが起きました',
+};
+
+/** Google の住所検索（Google の地図のときだけ。Google の規約上、結果は Google の地図に載せる） */
+function googleSearch(query) {
+  const g = window.google.maps;
+  return new Promise((resolve, reject) => {
+    const request = {
+      address: M.googleSearchQuery(state.net, query, state.ward),
+      bounds: M.wardBounds(state.net, state.ward),
+      region: 'jp',
+      componentRestrictions: { country: 'JP' },
+    };
+    const done = (results, status) => {
+      if (status === 'OK') {
+        resolve(M.placesInArea(state.net, results.map((r) => ({
+          name: M.googleDisplayName(r.formatted_address),
+          lat: r.geometry.location.lat(),
+          lng: r.geometry.location.lng(),
+          source: 'google',
+        })), state.ward));
+      } else if (status === 'ZERO_RESULTS') {
+        resolve([]);
+      } else {
+        reject(new Error(GEOCODER_MESSAGES[status] ?? status));
+      }
+    };
+    // 新しい版は Promise も返す。失敗をコールバックで扱うので、Promise 側の失敗は握りつぶす
+    new g.Geocoder().geocode(request, done)?.catch?.(() => {});
+  });
+}
+
+/** 国土地理院の住所検索（キー不要・無料。住所・地名で探す。施設名は探せない） */
+async function gsiSearch(query) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 15000);
+  try {
+    const res = await fetch(M.gsiSearchURL(M.gsiSearchQuery(state.net, query, state.ward)), { signal: ctrl.signal });
+    if (!res.ok) throw new Error(`国土地理院の住所検索が応答しませんでした（HTTP ${res.status}）`);
+    return M.placesInArea(state.net, M.parseGSISearch(await res.json()), state.ward).map((p) => ({ ...p, source: 'gsi' }));
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('国土地理院の住所検索が時間切れになりました');
+    if (e instanceof TypeError) throw new Error('国土地理院の住所検索に接続できませんでした');
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function runSearch(query) {
+  const q = query.trim();
+  if (!q) return;
+  const seq = ++search.seq;
+  showResults({ loading: true });
+  let results;
+  let note = '';
+  try {
+    if (state.engine === 'google' && window.google?.maps?.Geocoder) {
+      try {
+        results = await googleSearch(q);
+      } catch (e) {
+        // 上限・キーの設定などで Google が使えないときは、国土地理院の住所検索で探す
+        console.warn(e);
+        results = await gsiSearch(q);
+        if (!search.noticedFallback) {
+          search.noticedFallback = true;
+          note = `Google の住所検索が使えないため（${e.message}）、${M.GSI_SEARCH_CREDIT}で探しました。`;
+        }
+      }
+    } else {
+      results = await gsiSearch(q);
+    }
+  } catch (e) {
+    if (seq === search.seq) showResults({ error: `検索できませんでした（${e.message}）。` });
+    return;
+  }
+  if (seq === search.seq) showResults({ results, query: q, note });
+}
+
+function showResults(view) {
+  const box = $('results');
+  box.replaceChildren();
+  box.hidden = false;
+  const head = el('div', { class: 'results-head' },
+    el('span', { text: view.loading ? '検索中…' : '検索結果' }),
+    el('button', { type: 'button', class: 'close small', 'aria-label': '検索結果を閉じる', text: '×', onclick: () => { box.hidden = true; } }));
+  box.append(head);
+  if (view.loading) return;
+  if (view.error) {
+    box.append(el('p', { class: 'results-msg', text: view.error }));
+    return;
+  }
+  if (view.note) box.append(el('p', { class: 'results-msg', text: view.note }));
+  if (!view.results.length) {
+    box.append(el('p', { class: 'results-msg', text: `${areaName()}の範囲で「${view.query}」は見つかりませんでした。住所や地名で探してください。` }));
+    return;
+  }
+  const list = el('ul', { class: 'results-list' });
+  for (const r of view.results) {
+    const sub = r.source === 'gsi' ? `${r.wardName}・${M.GSI_SEARCH_CREDIT}` : r.wardName;
+    list.append(el('li', {}, el('button', { type: 'button', onclick: () => chooseResult(r) },
+      el('span', { class: 'result-name', text: r.name }),
+      el('small', { text: sub }))));
+  }
+  box.append(list);
+}
+
+/** 検索結果を選ぶ。印を立てて地図を寄せ、近くの車道のカルテを開く */
+function chooseResult(r) {
+  $('results').hidden = true;
+  $('search-input').blur();
+  state.pin = { lat: r.lat, lng: r.lng, name: r.name };
+  state.map.showPin(state.pin);
+  state.map.setView(r.lat, r.lng, 17);
+  const hit = M.snapToRoadway(state.net, state.index, r.lat, r.lng, state.ward);
+  if (!hit) {
+    select(null);
+    toast(`検索した地点から${M.SEARCH_SNAP_METERS}m以内に車道が見つかりませんでした。`);
+    return;
+  }
+  const c = M.toLatLng(state.net, hit.x, hit.y);
+  select({ segment: hit.segment, lat: c.lat, lng: c.lng, heading: hit.heading });
+}
+
+function clearSearch() {
+  search.seq++;
+  $('results').hidden = true;
+  state.pin = null;
+  state.map?.showPin(null);
+}
+
 // MARK: - 表示
 
 function el(tag, attrs = {}, ...children) {
@@ -520,6 +702,12 @@ function buildControls() {
   const mode = $('mode');
   M.COLOR_MODES.forEach((m) => mode.append(el('button', { type: 'button', 'data-mode': m.id, text: m.title, onclick: () => setMode(m.id) })));
 
+  $('search').addEventListener('submit', (e) => {
+    e.preventDefault();
+    runSearch($('search-input').value);
+  });
+  $('search-input').addEventListener('input', (e) => { if (e.target.value === '') clearSearch(); });
+
   $('btn-locate').addEventListener('click', locate);
   $('btn-legend').addEventListener('click', () => $('legend').showModal());
   $('btn-credits').addEventListener('click', () => $('legend').showModal());
@@ -529,6 +717,7 @@ function buildControls() {
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     if (!$('sv-full').hidden) closeFullStreetView();
+    else if (!$('results').hidden) $('results').hidden = true;
     else if (state.selection && !$('legend').open) select(null);
   });
   renderControls();

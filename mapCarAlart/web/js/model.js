@@ -516,3 +516,72 @@ export function streetViewEmbedURL(lat, lng, h, apiKey) {
   });
   return `https://www.google.com/maps/embed/v1/streetview?${q.toString().replace('%2C', ',')}`;
 }
+
+// MARK: - 住所検索
+
+/** 検索した地点から、この距離以内の車道を選んでカルテを開く（m） */
+export const SEARCH_SNAP_METERS = 80;
+/** 検索結果の最大件数 */
+export const SEARCH_LIMIT = 20;
+export const GSI_SEARCH_ENDPOINT = 'https://msearch.gsi.go.jp/address-search/AddressSearch';
+/** 国土地理院の住所検索の結果に添える出典（地理院地図と同じく、協力の東大CSISを示す） */
+export const GSI_SEARCH_CREDIT = '国土地理院の住所検索（協力：東大CSIS）';
+
+/** Google の住所検索に渡す言葉。区や都の名前がなければ補う（iOS 版と同じ） */
+export function googleSearchQuery(net, query, ward) {
+  if (ward !== null && net.wards[ward]) {
+    const name = net.wards[ward];
+    return query.includes(name) ? query : `東京都${name} ${query}`;
+  }
+  return query.includes('東京') ? query : `東京都 ${query}`;
+}
+
+/** 国土地理院の住所検索に渡す言葉。区を選んでいて区名がなければ前に付ける（iOS 版と同じ） */
+export function gsiSearchQuery(net, query, ward) {
+  if (ward !== null && net.wards[ward] && !query.includes(net.wards[ward])) return net.wards[ward] + query;
+  return query;
+}
+
+export function gsiSearchURL(query) {
+  return `${GSI_SEARCH_ENDPOINT}?${new URLSearchParams({ q: query })}`;
+}
+
+/** 国土地理院の住所検索のレスポンス（GeoJSON の Feature の配列。座標は [経度, 緯度]） */
+export function parseGSISearch(json) {
+  if (!Array.isArray(json)) throw new Error('国土地理院の住所検索の応答が想定と違います');
+  const out = [];
+  for (const f of json) {
+    const c = f?.geometry?.coordinates;
+    if (!Array.isArray(c) || c.length < 2) continue;
+    const [lng, lat] = c;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) continue;
+    out.push({ name: f.properties?.title ?? '（名称なし）', lat, lng });
+  }
+  return out;
+}
+
+/** 「日本、〒176-0001 東京都練馬区…」から国名と郵便番号を除く */
+export function googleDisplayName(address) {
+  let s = address;
+  if (s.startsWith('日本、')) s = s.slice(3);
+  return s.replace(/^〒\d{3}-\d{4}\s*/, '');
+}
+
+/** 区（null なら4区）の区界の内側の結果だけ残し、区名を付ける */
+export function placesInArea(net, places, ward) {
+  const out = [];
+  for (const p of places) {
+    const q = toLocal(net, p.lat, p.lng);
+    const w = wardContaining(net, q.x, q.y);
+    if (w === null || (ward !== null && w !== ward)) continue;
+    out.push({ ...p, ward: w, wardName: net.wards[w] });
+    if (out.length >= SEARCH_LIMIT) break;
+  }
+  return out;
+}
+
+/** 検索した地点から SEARCH_SNAP_METERS 以内の車道（徒歩道・石段を除く）。区を選んでいればその区の中だけ */
+export function snapToRoadway(net, index, lat, lng, ward) {
+  const p = toLocal(net, lat, lng);
+  return index.nearest(net, p.x, p.y, SEARCH_SNAP_METERS, (i) => net.t[i] < 2 && (ward === null || net.ward[i] === ward));
+}
