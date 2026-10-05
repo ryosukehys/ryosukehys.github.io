@@ -27,4 +27,6 @@ jobs:
           node-version: 22
       - run: npm test
       # 公開する config.js にキーが書かれていないこと
-      - run: grep -q "googleMapsApiKey: ''" config.js
+      - name: config.js has no API key
+        run: |
+          grep -q "googleMapsApiKey: ''" config.js
