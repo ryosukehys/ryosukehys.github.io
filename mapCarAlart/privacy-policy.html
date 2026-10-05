@@ -186,8 +186,9 @@
         <li>位置情報：現在地ボタンを押したときに、ブラウザが位置情報の許可を求めます。現在地は地図の表示にだけ使い、保存・送信しません（地図の表示に伴い、表示している地図の範囲が地図サービスへ送られます）。許可はブラウザの設定でいつでも取り消せます。</li>
         <li>ブラウザへの保存：選んだ区・色分け・車両・地図の種類を、次に開いたときのために、ブラウザの保存領域（localStorage）に保存します。個人に関する情報は含みません。ブラウザのサイトデータを消すと削除されます。</li>
         <li>APIキー：Web版で使う Google Maps Platform の APIキーは開発者のもので、ページの中に含まれます（使えるサイトとAPIを制限しています）。利用者がAPIキーを入力することはありません。</li>
-        <li>外部サービス：Google（Maps JavaScript API による地図の表示、Maps Embed API による区間カルテのストリートビュー、「Googleストリートビューで開く」によるGoogleマップの表示）と、国土地理院（Googleの地図が使えないときの地図タイル「地理院タイル」）と通信します。送られる主な情報は、表示している地図の範囲、ストリートビューを求めた地点の座標と道の向き、ブラウザの通信に伴う技術的な情報（IPアドレス、ブラウザの種類、参照元のページなど）です。Googleがクッキー等を利用する場合があります。</li>
-        <li>Web版には、住所検索と音声入力の機能はありません。</li>
+        <li>外部サービス：Google（Maps JavaScript API による地図の表示、Maps Embed API による区間カルテのストリートビュー、Geocoding による住所検索、「Googleストリートビューで開く」によるGoogleマップの表示）と、国土地理院（Googleの地図が使えないときの地図タイル「地理院タイル」と、住所検索。住所検索の一部に東京大学CSISのサービスが使われています）と通信します。送られる主な情報は、表示している地図の範囲、ストリートビューを求めた地点の座標と道の向き、住所検索で入力した言葉、ブラウザの通信に伴う技術的な情報（IPアドレス、ブラウザの種類、参照元のページなど）です。Googleがクッキー等を利用する場合があります。</li>
+        <li>住所検索：Googleの地図のときはGoogleで、それ以外のとき（またはGoogleの住所検索が使えないとき）は国土地理院で探します。入力した言葉は検索のためだけに送られ、本ページが保存することはありません。</li>
+        <li>Web版には、音声入力の機能はありません。</li>
       </ul>
 
       <h2>9. お問い合わせ</h2>
@@ -274,8 +275,9 @@
         <li>Location: your browser asks for location permission when you tap the current location button. Your location is used only to show it on the map and is not stored or sent (the visible map area is sent to the map service as part of showing the map). You can revoke the permission at any time in your browser settings.</li>
         <li>Browser storage: the selected ward, color mode, vehicle and map type are saved in your browser's storage (localStorage) for your next visit. They contain no personal information and are deleted when you clear the site data in your browser.</li>
         <li>API key: the Google Maps Platform API key used by the web version belongs to the Developer and is included in the page (restricted to specific sites and APIs). You never enter an API key.</li>
-        <li>External services: Google (map display with the Maps JavaScript API, Street View in the road card with the Maps Embed API, and Google Maps when you tap "Open in Google Street View") and GSI (map tiles, "GSI Tiles", when Google's map is not available). The main information sent is the visible map area, the coordinates and road direction of the place for Street View, and technical information sent as part of browser communication (IP address, browser type, referring page, etc.). Google may use cookies or similar technologies.</li>
-        <li>The web version has no address search or voice input.</li>
+        <li>External services: Google (map display with the Maps JavaScript API, Street View in the road card with the Maps Embed API, address search with Geocoding, and Google Maps when you tap "Open in Google Street View") and GSI (map tiles, "GSI Tiles", when Google's map is not available, and address search, which partly uses a service of CSIS, the University of Tokyo). The main information sent is the visible map area, the coordinates and road direction of the place for Street View, the words you enter in address search, and technical information sent as part of browser communication (IP address, browser type, referring page, etc.). Google may use cookies or similar technologies.</li>
+        <li>Address search: on the Google map, Google is used; otherwise (or when Google's address search is not available), GSI is used. The words you enter are sent only to perform the search and are not stored by the page.</li>
+        <li>The web version has no voice input.</li>
       </ul>
 
       <h2>9. Contact Us</h2>

@@ -470,3 +470,105 @@ button.close.floating {
     box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
   }
 }
+
+/* MARK: 住所検索 */
+
+.search {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font: inherit;
+  font-size: 16px; /* iOS で入力時に拡大されないよう16px以上 */
+  min-height: 36px;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.search button {
+  font: inherit;
+  font-size: 14px;
+  flex: 0 0 auto;
+  padding: 4px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+.results {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 62px;
+  z-index: 1100; /* Leaflet の拡大縮小ボタン（1000）より上 */
+  max-height: min(60%, 420px);
+  overflow-y: auto;
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 6px 10px 8px;
+}
+
+.results-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+button.close.small { width: 26px; height: 26px; font-size: 16px; }
+
+.results-msg { margin: 6px 2px; font-size: 13px; }
+
+.results-list { list-style: none; margin: 0; padding: 0; }
+
+.results-list button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  padding: 8px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.results-list li:last-child button { border-bottom: 0; }
+.results-list small { color: var(--muted); font-size: 12px; }
+
+.pin-icon { background: none; border: 0; }
+.search-pin {
+  width: 22px;
+  height: 22px;
+  border-radius: 50% 50% 50% 0;
+  background: #af52de;
+  border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+a.home {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--accent);
+}
