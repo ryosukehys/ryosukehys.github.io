@@ -1,0 +1,160 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", Helvetica, Arial, sans-serif;
+  color: #24292f;
+  background: #f6f8fa;
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+}
+
+a { color: #0969da; }
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  padding-top: max(0.6rem, env(safe-area-inset-top));
+  background: #24292f;
+  color: #fff;
+}
+.home-link {
+  color: #fff;
+  text-decoration: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 0.25rem 0.4rem;
+  border-radius: 6px;
+}
+.home-link:hover { background: rgba(255, 255, 255, 0.12); }
+.title h1 { font-size: 1.05rem; font-weight: 600; }
+.title p { font-size: 0.78rem; color: #8b949e; }
+
+.layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+#map {
+  height: 58vh;
+  height: 58dvh;
+  min-height: 300px;
+  background: #e8ecef;
+}
+
+.panel {
+  padding: 0.75rem 1rem 1.5rem;
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+}
+
+.panel-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.9rem;
+  margin-bottom: 0.75rem;
+}
+.chip {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.3rem 0.8rem;
+  border: 1px solid #d0d7de;
+  border-radius: 999px;
+  background: #fff;
+  color: #24292f;
+  cursor: pointer;
+}
+.chip:hover { border-color: #0969da; }
+.chip.is-active { background: #24292f; border-color: #24292f; color: #fff; }
+.toggle { font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.3rem; cursor: pointer; }
+
+.legs { list-style: none; display: grid; gap: 0.5rem; }
+.leg {
+  background: #fff;
+  border: 1px solid #d0d7de;
+  border-left: 5px solid var(--leg-color);
+  border-radius: 6px;
+}
+.leg.is-selected { border-color: var(--leg-color); box-shadow: 0 0 0 1px var(--leg-color); }
+.leg-head {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0.6rem 0.8rem;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: baseline;
+  gap: 0.1rem 0.5rem;
+  color: inherit;
+}
+.leg-name { font-weight: 700; color: var(--leg-color); }
+.leg-km { font-weight: 600; }
+.leg-route { grid-column: 1 / -1; font-size: 0.85rem; color: #57606a; }
+.leg-detail { display: none; padding: 0 0.8rem 0.7rem; font-size: 0.85rem; }
+.leg.is-selected .leg-detail { display: block; }
+.checkpoints { list-style: none; margin-top: 0.4rem; border-top: 1px solid #eaeef2; }
+.checkpoints li {
+  display: grid;
+  grid-template-columns: 3.6rem 1fr auto;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid #eaeef2;
+}
+.cp-km { font-variant-numeric: tabular-nums; font-weight: 600; }
+.cp-total { color: #8b949e; font-variant-numeric: tabular-nums; }
+
+.muted { color: #656d76; }
+.status { margin-top: 0.75rem; font-size: 0.85rem; color: #cf222e; }
+.status:empty { display: none; }
+
+.notes { margin-top: 1rem; font-size: 0.75rem; color: #656d76; display: grid; gap: 0.4rem; }
+
+/* 地図上の印 */
+.station span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #24292f;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+.station-start span { background: #1a7f37; }
+.station-finish span { background: #cf222e; }
+
+.km-mark span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.leaflet-popup-content { font-size: 0.85rem; line-height: 1.5; }
+
+@media (min-width: 900px) {
+  body { height: 100vh; height: 100dvh; overflow: hidden; }
+  .layout { flex-direction: row; }
+  #map { flex: 1; height: auto; min-height: 0; }
+  .panel { width: 380px; overflow-y: auto; border-left: 1px solid #d0d7de; }
+}
