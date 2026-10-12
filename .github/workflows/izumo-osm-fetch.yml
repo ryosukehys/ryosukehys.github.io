@@ -1,5 +1,5 @@
-# 出雲駅伝コースマップ用に、出雲市周辺の OpenStreetMap データを取得してこのブランチに保存する（作業用の一時ブランチ）
-name: Fetch Izumo OSM data
+# 作業用の一時ブランチ: App Store（iTunes Search API）から開発者のアプリ一覧とアイコンを取得して、このブランチに保存する
+name: Fetch App Store data
 
 on:
   push:
@@ -13,10 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: python3 osm/fetch.py
+      - run: python3 appstore/fetch.py
       - run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add osm/*.json.gz
-          git commit -m "出雲市周辺の OSM データを取得"
+          git add appstore
+          git commit -m "App Store のアプリ一覧とアイコンを取得"
           git push
