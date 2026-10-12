@@ -26,12 +26,33 @@
         <button type="button" id="show-all" class="chip is-active">全体</button>
         <label class="toggle"><input type="checkbox" id="toggle-km" checked> 1kmごとの目印</label>
         <label class="toggle"><input type="checkbox" id="toggle-checkpoints" checked> 通過地点</label>
-        <button type="button" id="locate" class="chip">現在地</button>
+        <button type="button" id="locate" class="chip" aria-pressed="false">現在地</button>
       </div>
+
+      <p id="here" class="here" role="status"></p>
 
       <ol id="legs" class="legs" aria-label="区間"></ol>
 
       <p id="status" class="status" role="status"></p>
+
+      <details id="locate-help" class="help">
+        <summary>現在地が出ないとき</summary>
+        <p>「現在地」を押すと、ブラウザが位置情報の利用を確認します。「許可」を選んでください。もう一度押すと止まります。現在地はこの端末の地図に表示するだけで、どこにも送りません。</p>
+        <p>一度「許可しない」を選んだときや、確認が出ないときは、次の設定を見直してください（OS のバージョンによって表示名が少し違います）。</p>
+        <h3>iPhone</h3>
+        <ol>
+          <li>「設定」→「プライバシーとセキュリティ」→「位置情報サービス」をオンにする</li>
+          <li>同じ画面の一覧で「Safariのサイト」（Chrome で見ているときは「Chrome」）を「このAppの使用中」にする</li>
+          <li>Safari ではアドレスバーのメニュー（「ぁあ」など）→「Webサイトの設定」→「位置情報」を「確認」か「許可」にする</li>
+          <li>ページを読み込み直して「現在地」を押す</li>
+        </ol>
+        <h3>Android（Chrome）</h3>
+        <ol>
+          <li>端末の「設定」→「位置情報」をオンにする</li>
+          <li>アドレスバー左のアイコン →「権限」（または「サイトの設定」）→「位置情報」を許可する</li>
+          <li>ページを読み込み直して「現在地」を押す</li>
+        </ol>
+      </details>
 
       <div class="notes">
         <p>中継所名・区間距離は第38回大会（2026年10月12日）の大会要項によります。通過地点の距離は大会スタートからの累計です。</p>

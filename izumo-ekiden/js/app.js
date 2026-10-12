@@ -1,4 +1,4 @@
-import { kmMarks } from "./geo.js";
+import { cumulativeM, kmMarks, nearestOnLine } from "./geo.js";
 
 const LEG_COLORS = {
   1: "#c62f3c",
@@ -13,6 +13,8 @@ const GSI_ATTRIBUTION =
   '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a>';
 
 const statusEl = document.getElementById("status");
+const hereEl = document.getElementById("here");
+const locateHelpEl = document.getElementById("locate-help");
 const legsEl = document.getElementById("legs");
 const showAllBtn = document.getElementById("show-all");
 const kmToggle = document.getElementById("toggle-km");
@@ -20,6 +22,8 @@ const checkpointToggle = document.getElementById("toggle-checkpoints");
 const locateBtn = document.getElementById("locate");
 
 const map = L.map("map", { zoomSnap: 0.25, zoomControl: true, attributionControl: true }).setView([35.39, 132.75], 12);
+// 現在地はコースの線や中継所より上に描く
+map.createPane("here").style.zIndex = 630;
 map.attributionControl.setPrefix(false);
 map.attributionControl.addAttribution(
   'コース: &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>',
@@ -222,7 +226,9 @@ function drawCourse(geojson) {
     }
     state.kmLayers.set(p.leg, kmLayer);
 
-    return { props: p, casing, solid, dashed, bounds: L.latLngBounds(all) };
+    const coords = f.geometry.coordinates;
+    const lineM = cumulativeM(coords).at(-1);
+    return { props: p, coords, lineM, casing, solid, dashed, bounds: L.latLngBounds(all) };
   });
   state.legs = legs;
 
@@ -272,24 +278,208 @@ kmToggle.addEventListener("change", updateKmLayer);
 checkpointToggle.addEventListener("change", updateCheckpointLayer);
 map.on("zoomend", updateKmLayer);
 
-let locationLayer = null;
+// 全画面: 地図だけを画面いっぱいに出す。iPhone の Safari はページの全画面表示に対応していないので、
+// CSS で地図を広げ、対応しているブラウザ（Android・パソコン）ではブラウザの枠も消す。
+const ICONS = {
+  expand:
+    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
+  collapse:
+    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>',
+  locate:
+    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22"/></svg>',
+};
+
+function mapButton(bar, label, onClick) {
+  const btn = L.DomUtil.create("button", "", bar);
+  btn.type = "button";
+  btn.title = label;
+  btn.setAttribute("aria-label", label);
+  L.DomEvent.on(btn, "click", onClick);
+  return btn;
+}
+
+const mapButtons = {};
+const MapButtons = L.Control.extend({
+  options: { position: "topleft" },
+  onAdd() {
+    const bar = L.DomUtil.create("div", "leaflet-bar map-buttons");
+    mapButtons.full = mapButton(bar, "地図を全画面で見る", () => setFull(!isFull()));
+    mapButtons.full.innerHTML = ICONS.expand;
+    mapButtons.locate = mapButton(bar, "現在地", () => locateBtn.click());
+    mapButtons.locate.innerHTML = ICONS.locate;
+    mapButtons.locate.setAttribute("aria-pressed", "false");
+    L.DomEvent.disableClickPropagation(bar);
+    return bar;
+  },
+});
+new MapButtons().addTo(map);
+
+// 全画面のときだけ地図の上に出す、区間の色の凡例と現在地の文
+function mapOverlay(className) {
+  const el = L.DomUtil.create("div", className, map.getContainer());
+  L.DomEvent.disableClickPropagation(el);
+  L.DomEvent.disableScrollPropagation(el);
+  return el;
+}
+const legendEl = mapOverlay("map-legend");
+legendEl.innerHTML = Object.entries(LEG_COLORS)
+  .map(([leg, color]) => `<span style="--leg-color:${color}">${leg}区</span>`)
+  .join("");
+const mapHereEl = mapOverlay("map-here");
+// 地図の上の文から「現在地が出ないとき」へ飛ぶときは、全画面をやめて手順を見せる
+mapHereEl.addEventListener("click", (e) => {
+  if (e.target.closest('a[href="#locate-help"]')) setFull(false);
+});
+
+function setHere(content, { html = false } = {}) {
+  for (const el of [hereEl, mapHereEl]) {
+    if (html) el.innerHTML = content;
+    else el.textContent = content;
+  }
+}
+
+const isFull = () => document.body.classList.contains("map-full");
+
+function setFull(on) {
+  document.body.classList.toggle("map-full", on);
+  const label = on ? "全画面をやめる" : "地図を全画面で見る";
+  mapButtons.full.innerHTML = on ? ICONS.collapse : ICONS.expand;
+  mapButtons.full.title = label;
+  mapButtons.full.setAttribute("aria-label", label);
+  map.invalidateSize();
+  const root = document.documentElement;
+  if (on && root.requestFullscreen && !document.fullscreenElement) root.requestFullscreen().catch(() => {});
+  if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+}
+
+// ブラウザ側で全画面が解かれた（Android の戻る・Esc など）ら、地図も元に戻す
+document.addEventListener("fullscreenchange", () => {
+  if (!document.fullscreenElement && isFull()) setFull(false);
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && isFull()) setFull(false);
+});
+
+// 現在地: ボタンを押している間は位置を追い続ける。最初の1回だけ、コースと現在地が両方入るように地図を合わせる。
+const tracking = { on: false, fitted: false, accuracy: null, dot: null };
+
+function fmtDistance(m) {
+  if (m < 1000) return `${Math.max(10, Math.round(m / 10) * 10)}m`;
+  return `${(m / 1000).toFixed(m < 10000 ? 1 : 0)}km`;
+}
+
+// 現在地にいちばん近いコース上の地点を文にする。1区と6区のように同じ道を走る区間はまとめて挙げる。
+function describePosition(latlng) {
+  const here = [latlng.lng, latlng.lat];
+  const near = state.legs
+    .map((leg) => ({ leg, ...nearestOnLine(leg.coords, here) }))
+    .sort((a, b) => a.distM - b.distM);
+  if (!near.length) return "";
+  const best = near[0];
+  if (best.distM > 1500) {
+    return `現在地からコースまで約${fmtDistance(best.distM)}（いちばん近いのは${best.leg.props.leg}区）`;
+  }
+  const spots = near
+    .filter((n) => n.distM <= best.distM + 30)
+    .sort((a, b) => a.leg.props.leg - b.leg.props.leg)
+    .map((n) => {
+      const p = n.leg.props;
+      const km = (n.alongM / n.leg.lineM) * p.officialKm;
+      const total = p.startKm > 0 ? `（スタートから${fmtKm(p.startKm + km)}）` : "";
+      return `${p.leg}区の${fmtKm(km)}地点${total}`;
+    });
+  return `いちばん近いのは ${spots.join("・")} 付近、コースまで約${fmtDistance(best.distM)}`;
+}
+
+function setTrackingButton(on) {
+  for (const btn of [locateBtn, mapButtons.locate]) {
+    btn.classList.toggle("is-active", on);
+    btn.setAttribute("aria-pressed", String(on));
+  }
+}
+
+function stopTracking() {
+  map.stopLocate();
+  tracking.on = false;
+  tracking.accuracy?.remove();
+  tracking.dot?.remove();
+  tracking.accuracy = tracking.dot = null;
+  setTrackingButton(false);
+}
+
 locateBtn.addEventListener("click", () => {
-  statusEl.textContent = "現在地を取得しています…";
-  map.locate({ setView: false, enableHighAccuracy: true, timeout: 15000 });
+  if (tracking.on) {
+    stopTracking();
+    setHere("");
+    return;
+  }
+  tracking.on = true;
+  tracking.fitted = false;
+  setTrackingButton(true);
+  setHere("現在地を取得しています…");
+  map.locate({ watch: true, setView: false, enableHighAccuracy: true, timeout: 20000, maximumAge: 5000 });
 });
+
 map.on("locationfound", (e) => {
-  statusEl.textContent = "";
-  locationLayer?.remove();
-  locationLayer = L.layerGroup([
-    L.circle(e.latlng, { radius: e.accuracy, color: "#0969da", weight: 1, fillOpacity: 0.1, interactive: false }),
-    L.circleMarker(e.latlng, { radius: 7, color: "#ffffff", weight: 2, fillColor: "#0969da", fillOpacity: 1 }).bindPopup(
-      "現在地",
-    ),
-  ]).addTo(map);
-  map.setView(e.latlng, Math.max(map.getZoom(), 15));
+  if (!tracking.on) return;
+  if (tracking.dot) {
+    tracking.accuracy.setLatLng(e.latlng).setRadius(e.accuracy);
+    tracking.dot.setLatLng(e.latlng);
+  } else {
+    tracking.accuracy = L.circle(e.latlng, {
+      pane: "here",
+      radius: e.accuracy,
+      color: "#0969da",
+      weight: 1,
+      fillOpacity: 0.12,
+      interactive: false,
+    }).addTo(map);
+    tracking.dot = L.circleMarker(e.latlng, {
+      pane: "here",
+      radius: 8,
+      color: "#ffffff",
+      weight: 3,
+      fillColor: "#0969da",
+      fillOpacity: 1,
+    })
+      .bindPopup("現在地")
+      .addTo(map);
+  }
+  setHere(describePosition(e.latlng));
+  if (!tracking.fitted) {
+    tracking.fitted = true;
+    const leg = state.legs.find((l) => l.props.leg === state.selected);
+    const base = leg ? leg.bounds : state.courseBounds;
+    const bounds = base ? L.latLngBounds(base.getSouthWest(), base.getNorthEast()).extend(e.latlng) : null;
+    if (bounds) map.fitBounds(bounds, { padding: [32, 32], maxZoom: 16 });
+    else map.setView(e.latlng, 15);
+  }
 });
+
 map.on("locationerror", (e) => {
-  statusEl.textContent = `現在地を取得できませんでした（${e.message}）`;
+  if (!tracking.on) return;
+  // 一度取れていれば、トンネルなどでの一時的な失敗（取得できない・時間切れ）は無視して追い続ける
+  if (tracking.dot && (e.code === 2 || e.code === 3)) return;
+  if (e.code === 3) {
+    setHere("現在地を取得しています…（時間がかかっています。屋外や窓際だと早く取れます）");
+    return;
+  }
+  stopTracking();
+  if (e.code === 1) {
+    setHere(
+      '位置情報の利用が許可されていません。<a href="#locate-help">現在地が出ないとき</a>の手順で許可してから、もう一度押してください。',
+      { html: true },
+    );
+    locateHelpEl.open = true;
+  } else if (e.code === 2) {
+    setHere(
+      '現在地を取得できませんでした。端末の位置情報サービスがオンになっているか（<a href="#locate-help">現在地が出ないとき</a>）確かめて、もう一度押してください。',
+      { html: true },
+    );
+    locateHelpEl.open = true;
+  } else {
+    setHere("このブラウザでは現在地を取得できません。");
+  }
 });
 
 fetch("data/course.geojson")
