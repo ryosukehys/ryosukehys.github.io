@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>出雲駅伝 コースマップ</title>
+  <meta name="description" content="出雲全日本大学選抜駅伝競走（6区間 45.1km）のコースと中継所を地図に表示します。">
+  <link rel="icon" type="image/png" href="../Icon.png">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="home-link" href="../" aria-label="ホームへ戻る">&larr;</a>
+    <div class="title">
+      <h1>出雲駅伝 コースマップ</h1>
+      <p>出雲大社正面鳥居前 → 出雲ドーム前 · 6区間 45.1km</p>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div id="map" role="region" aria-label="コースの地図"></div>
+
+    <aside class="panel">
+      <div class="panel-tools">
+        <button type="button" id="show-all" class="chip is-active">全体</button>
+        <label class="toggle"><input type="checkbox" id="toggle-km" checked> 1kmごとの目印</label>
+        <label class="toggle"><input type="checkbox" id="toggle-checkpoints" checked> 通過地点</label>
+        <button type="button" id="locate" class="chip">現在地</button>
+      </div>
+
+      <ol id="legs" class="legs" aria-label="区間"></ol>
+
+      <p id="status" class="status" role="status"></p>
+
+      <div class="notes">
+        <p>中継所名・区間距離は第38回大会（2026年10月12日）の大会要項によります。通過地点の距離は大会スタートからの累計です。</p>
+        <p>コースの線は公開されている通過地点をもとに OpenStreetMap の道路に沿って引いた参考図です。1kmごとの目印も線の長さから求めた目安なので、正確な位置や交通規制は<a href="https://www.izumo-ekiden.jp/" target="_blank" rel="noopener">大会公式サイト</a>で確認してください。</p>
+        <p>地図: <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a> / 道路: &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a></p>
+      </div>
+    </aside>
+  </div>
+
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
