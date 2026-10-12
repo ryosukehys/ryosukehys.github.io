@@ -1,6 +1,6 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-html, body { height: 100%; }
+html, body { min-height: 100%; }
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", Helvetica, Arial, sans-serif;
@@ -38,13 +38,13 @@ a { color: #0969da; }
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
 }
 
 #map {
-  height: 58vh;
-  height: 58dvh;
-  min-height: 300px;
+  flex-shrink: 0;
+  height: 62vh;
+  height: 62dvh;
+  min-height: 320px;
   background: #e8ecef;
 }
 
@@ -154,7 +154,7 @@ a { color: #0969da; }
 
 @media (min-width: 900px) {
   body { height: 100vh; height: 100dvh; overflow: hidden; }
-  .layout { flex-direction: row; }
+  .layout { flex-direction: row; min-height: 0; }
   #map { flex: 1; height: auto; min-height: 0; }
   .panel { width: 380px; overflow-y: auto; border-left: 1px solid #d0d7de; }
 }

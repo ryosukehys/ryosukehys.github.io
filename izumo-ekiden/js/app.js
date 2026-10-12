@@ -6,7 +6,7 @@ const LEG_COLORS = {
   3: "#2a9248",
   4: "#1f6fc0",
   5: "#7a4cc2",
-  6: "#d1307f",
+  6: "#0e7c86",
 };
 const KM_MARK_MIN_ZOOM = 13;
 const GSI_ATTRIBUTION =
@@ -19,7 +19,7 @@ const kmToggle = document.getElementById("toggle-km");
 const checkpointToggle = document.getElementById("toggle-checkpoints");
 const locateBtn = document.getElementById("locate");
 
-const map = L.map("map", { zoomControl: true, attributionControl: true }).setView([35.39, 132.75], 12);
+const map = L.map("map", { zoomSnap: 0.25, zoomControl: true, attributionControl: true }).setView([35.39, 132.75], 12);
 map.attributionControl.setPrefix(false);
 map.attributionControl.addAttribution(
   'コース: &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>',
@@ -103,7 +103,7 @@ function stationPopup(props, legs) {
 const state = {
   legs: [],
   selected: null,
-  kmLayer: L.layerGroup(),
+  kmLayers: new Map(), // 区間番号 → 1kmごとの目印
   checkpointLayer: L.layerGroup(),
   courseBounds: null,
 };
@@ -124,6 +124,7 @@ function styleLegs() {
     leg.item.querySelector("button").setAttribute("aria-expanded", String(focused));
   }
   showAllBtn.classList.toggle("is-active", state.selected === null);
+  updateKmLayer();
   const focusedLeg = state.legs.find((l) => l.props.leg === state.selected);
   if (focusedLeg) {
     focusedLeg.casing.bringToFront();
@@ -139,10 +140,13 @@ function selectLeg(legNo) {
   map.fitBounds(leg ? leg.bounds : state.courseBounds, { padding: [24, 24] });
 }
 
+// 区間を選んでいるときは、その区間の目印だけを出す（1区と6区は同じ道を走るので重なる）
 function updateKmLayer() {
-  const visible = kmToggle.checked && map.getZoom() >= KM_MARK_MIN_ZOOM;
-  if (visible) state.kmLayer.addTo(map);
-  else state.kmLayer.remove();
+  const zoomOk = kmToggle.checked && map.getZoom() >= KM_MARK_MIN_ZOOM;
+  for (const [legNo, layer] of state.kmLayers) {
+    if (zoomOk && (state.selected === null || state.selected === legNo)) layer.addTo(map);
+    else layer.remove();
+  }
 }
 
 function updateCheckpointLayer() {
@@ -210,11 +214,13 @@ function drawCourse(geojson) {
       layer?.bindTooltip(`${p.leg}区 ${fmtKm(p.officialKm)}`, { sticky: true });
     }
 
+    const kmLayer = L.layerGroup();
     for (const mark of kmMarks(f.geometry.coordinates, p.officialKm)) {
       L.marker(toLatLng(mark.coord), { icon: kmIcon(mark.km, color), keyboard: false })
         .bindTooltip(`${p.leg}区 ${mark.km}km地点の目安（累計 ${fmtKm(p.startKm + mark.km)}）`)
-        .addTo(state.kmLayer);
+        .addTo(kmLayer);
     }
+    state.kmLayers.set(p.leg, kmLayer);
 
     return { props: p, casing, solid, dashed, bounds: L.latLngBounds(all) };
   });
@@ -253,7 +259,6 @@ function drawCourse(geojson) {
 
   state.courseBounds = legs.reduce((b, l) => b.extend(l.bounds), L.latLngBounds(legs[0].bounds));
   map.fitBounds(state.courseBounds, { padding: [24, 24] });
-  updateKmLayer();
   updateCheckpointLayer();
   styleLegs();
 }
