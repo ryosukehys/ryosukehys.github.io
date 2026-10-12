@@ -92,7 +92,17 @@ function kmIcon(km, color) {
   });
 }
 
-function stationPopup(props, legs) {
+// ピンの吹き出しに付ける Google マップへのリンク（スマホではアプリが開く）
+function googleLinks([lon, lat]) {
+  const q = `${lat.toFixed(6)},${lon.toFixed(6)}`;
+  return `
+    <span class="gmap-links">
+      <a href="https://www.google.com/maps/search/?api=1&amp;query=${q}" target="_blank" rel="noopener">Googleマップで開く</a>
+      <a href="https://www.google.com/maps/dir/?api=1&amp;destination=${q}" target="_blank" rel="noopener">ここへの経路</a>
+    </span>`;
+}
+
+function stationPopup(props, legs, coord) {
   const arriving = legs.find((l) => l.props.leg === props.order);
   const leaving = legs.find((l) => l.props.leg === props.order + 1);
   const roles = [];
@@ -101,7 +111,8 @@ function stationPopup(props, legs) {
   return `
     <strong>${escapeHtml(props.title)}</strong><br>
     ${escapeHtml(props.name)}<br>
-    <span class="muted">スタートから ${fmtKm(props.km)}${roles.length ? ` · ${roles.join(" / ")}` : ""}</span>`;
+    <span class="muted">スタートから ${fmtKm(props.km)}${roles.length ? ` · ${roles.join(" / ")}` : ""}</span>
+    ${googleLinks(coord)}`;
 }
 
 const state = {
@@ -221,7 +232,9 @@ function drawCourse(geojson) {
     const kmLayer = L.layerGroup();
     for (const mark of kmMarks(f.geometry.coordinates, p.officialKm)) {
       L.marker(toLatLng(mark.coord), { icon: kmIcon(mark.km, color), keyboard: false })
-        .bindTooltip(`${p.leg}区 ${mark.km}km地点の目安（累計 ${fmtKm(p.startKm + mark.km)}）`)
+        .bindPopup(
+          `<strong>${p.leg}区 ${mark.km}km地点の目安</strong><br><span class="muted">スタートから ${fmtKm(p.startKm + mark.km)}</span>${googleLinks(mark.coord)}`,
+        )
         .addTo(kmLayer);
     }
     state.kmLayers.set(p.leg, kmLayer);
@@ -242,7 +255,7 @@ function drawCourse(geojson) {
       fillOpacity: 1,
     })
       .bindPopup(
-        `<strong>${escapeHtml(p.name)}</strong><br><span class="muted">${p.leg}区 · スタートから ${fmtKm(p.km)}</span>`,
+        `<strong>${escapeHtml(p.name)}</strong><br><span class="muted">${p.leg}区 · スタートから ${fmtKm(p.km)}</span>${googleLinks(f.geometry.coordinates)}`,
       )
       .addTo(state.checkpointLayer);
   }
@@ -254,7 +267,7 @@ function drawCourse(geojson) {
       title: `${p.title} ${p.name}`,
       zIndexOffset: 1000,
     })
-      .bindPopup(stationPopup(p, legs))
+      .bindPopup(stationPopup(p, legs, f.geometry.coordinates))
       .addTo(map);
   }
 
