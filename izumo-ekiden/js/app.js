@@ -1,4 +1,4 @@
-import { kmMarks } from "./geo.js";
+import { cumulativeM, kmMarks, nearestOnLine } from "./geo.js";
 
 const LEG_COLORS = {
   1: "#c62f3c",
@@ -13,6 +13,8 @@ const GSI_ATTRIBUTION =
   '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a>';
 
 const statusEl = document.getElementById("status");
+const hereEl = document.getElementById("here");
+const locateHelpEl = document.getElementById("locate-help");
 const legsEl = document.getElementById("legs");
 const showAllBtn = document.getElementById("show-all");
 const kmToggle = document.getElementById("toggle-km");
@@ -20,6 +22,8 @@ const checkpointToggle = document.getElementById("toggle-checkpoints");
 const locateBtn = document.getElementById("locate");
 
 const map = L.map("map", { zoomSnap: 0.25, zoomControl: true, attributionControl: true }).setView([35.39, 132.75], 12);
+// 現在地はコースの線や中継所より上に描く
+map.createPane("here").style.zIndex = 630;
 map.attributionControl.setPrefix(false);
 map.attributionControl.addAttribution(
   'コース: &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>',
@@ -222,7 +226,9 @@ function drawCourse(geojson) {
     }
     state.kmLayers.set(p.leg, kmLayer);
 
-    return { props: p, casing, solid, dashed, bounds: L.latLngBounds(all) };
+    const coords = f.geometry.coordinates;
+    const lineM = cumulativeM(coords).at(-1);
+    return { props: p, coords, lineM, casing, solid, dashed, bounds: L.latLngBounds(all) };
   });
   state.legs = legs;
 
@@ -272,24 +278,120 @@ kmToggle.addEventListener("change", updateKmLayer);
 checkpointToggle.addEventListener("change", updateCheckpointLayer);
 map.on("zoomend", updateKmLayer);
 
-let locationLayer = null;
+// 現在地: ボタンを押している間は位置を追い続ける。最初の1回だけ、コースと現在地が両方入るように地図を合わせる。
+const tracking = { on: false, fitted: false, accuracy: null, dot: null };
+
+function fmtDistance(m) {
+  if (m < 1000) return `${Math.max(10, Math.round(m / 10) * 10)}m`;
+  return `${(m / 1000).toFixed(m < 10000 ? 1 : 0)}km`;
+}
+
+// 現在地にいちばん近いコース上の地点を文にする。1区と6区のように同じ道を走る区間はまとめて挙げる。
+function describePosition(latlng) {
+  const here = [latlng.lng, latlng.lat];
+  const near = state.legs
+    .map((leg) => ({ leg, ...nearestOnLine(leg.coords, here) }))
+    .sort((a, b) => a.distM - b.distM);
+  if (!near.length) return "";
+  const best = near[0];
+  if (best.distM > 1500) {
+    return `現在地からコースまで約${fmtDistance(best.distM)}（いちばん近いのは${best.leg.props.leg}区）`;
+  }
+  const spots = near
+    .filter((n) => n.distM <= best.distM + 30)
+    .sort((a, b) => a.leg.props.leg - b.leg.props.leg)
+    .map((n) => {
+      const p = n.leg.props;
+      const km = (n.alongM / n.leg.lineM) * p.officialKm;
+      const total = p.startKm > 0 ? `（スタートから${fmtKm(p.startKm + km)}）` : "";
+      return `${p.leg}区の${fmtKm(km)}地点${total}`;
+    });
+  return `いちばん近いのは ${spots.join("・")} 付近、コースまで約${fmtDistance(best.distM)}`;
+}
+
+function setTrackingButton(on) {
+  locateBtn.classList.toggle("is-active", on);
+  locateBtn.setAttribute("aria-pressed", String(on));
+}
+
+function stopTracking() {
+  map.stopLocate();
+  tracking.on = false;
+  tracking.accuracy?.remove();
+  tracking.dot?.remove();
+  tracking.accuracy = tracking.dot = null;
+  setTrackingButton(false);
+}
+
 locateBtn.addEventListener("click", () => {
-  statusEl.textContent = "現在地を取得しています…";
-  map.locate({ setView: false, enableHighAccuracy: true, timeout: 15000 });
+  if (tracking.on) {
+    stopTracking();
+    hereEl.textContent = "";
+    return;
+  }
+  tracking.on = true;
+  tracking.fitted = false;
+  setTrackingButton(true);
+  hereEl.textContent = "現在地を取得しています…";
+  map.locate({ watch: true, setView: false, enableHighAccuracy: true, timeout: 20000, maximumAge: 5000 });
 });
+
 map.on("locationfound", (e) => {
-  statusEl.textContent = "";
-  locationLayer?.remove();
-  locationLayer = L.layerGroup([
-    L.circle(e.latlng, { radius: e.accuracy, color: "#0969da", weight: 1, fillOpacity: 0.1, interactive: false }),
-    L.circleMarker(e.latlng, { radius: 7, color: "#ffffff", weight: 2, fillColor: "#0969da", fillOpacity: 1 }).bindPopup(
-      "現在地",
-    ),
-  ]).addTo(map);
-  map.setView(e.latlng, Math.max(map.getZoom(), 15));
+  if (!tracking.on) return;
+  if (tracking.dot) {
+    tracking.accuracy.setLatLng(e.latlng).setRadius(e.accuracy);
+    tracking.dot.setLatLng(e.latlng);
+  } else {
+    tracking.accuracy = L.circle(e.latlng, {
+      pane: "here",
+      radius: e.accuracy,
+      color: "#0969da",
+      weight: 1,
+      fillOpacity: 0.12,
+      interactive: false,
+    }).addTo(map);
+    tracking.dot = L.circleMarker(e.latlng, {
+      pane: "here",
+      radius: 8,
+      color: "#ffffff",
+      weight: 3,
+      fillColor: "#0969da",
+      fillOpacity: 1,
+    })
+      .bindPopup("現在地")
+      .addTo(map);
+  }
+  hereEl.textContent = describePosition(e.latlng);
+  if (!tracking.fitted) {
+    tracking.fitted = true;
+    const leg = state.legs.find((l) => l.props.leg === state.selected);
+    const base = leg ? leg.bounds : state.courseBounds;
+    const bounds = base ? L.latLngBounds(base.getSouthWest(), base.getNorthEast()).extend(e.latlng) : null;
+    if (bounds) map.fitBounds(bounds, { padding: [32, 32], maxZoom: 16 });
+    else map.setView(e.latlng, 15);
+  }
 });
+
 map.on("locationerror", (e) => {
-  statusEl.textContent = `現在地を取得できませんでした（${e.message}）`;
+  if (!tracking.on) return;
+  // 一度取れていれば、トンネルなどでの一時的な失敗（取得できない・時間切れ）は無視して追い続ける
+  if (tracking.dot && (e.code === 2 || e.code === 3)) return;
+  if (e.code === 3) {
+    hereEl.textContent = "現在地を取得しています…（時間がかかっています。屋外や窓際だと早く取れます）";
+    return;
+  }
+  stopTracking();
+  if (e.code === 1) {
+    hereEl.innerHTML =
+      '位置情報の利用が許可されていません。<a href="#locate-help">現在地が出ないとき</a>の手順で許可してから、もう一度押してください。';
+    locateHelpEl.open = true;
+  } else if (e.code === 2) {
+    hereEl.innerHTML =
+      '現在地を取得できませんでした。端末の位置情報サービスがオンになっているか（<a href="#locate-help">現在地が出ないとき</a>）確かめて、もう一度押してください。';
+    locateHelpEl.open = true;
+  } else {
+    hereEl.textContent = "このブラウザでは現在地を取得できません。";
+  }
 });
 
 fetch("data/course.geojson")

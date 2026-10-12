@@ -112,6 +112,22 @@ a { color: #0969da; }
 .cp-km { font-variant-numeric: tabular-nums; font-weight: 600; }
 .cp-total { color: #8b949e; font-variant-numeric: tabular-nums; }
 
+.here {
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-left: 4px solid #0969da;
+  border-radius: 6px;
+  background: #ddf4ff;
+  font-size: 0.85rem;
+}
+.here:empty { display: none; }
+
+.help { margin-top: 1rem; font-size: 0.85rem; background: #fff; border: 1px solid #d0d7de; border-radius: 6px; }
+.help summary { padding: 0.5rem 0.8rem; cursor: pointer; font-weight: 600; }
+.help > p, .help h3, .help ol { margin: 0 0.8rem 0.6rem; }
+.help h3 { font-size: 0.85rem; margin-top: 0.8rem; }
+.help ol { padding-left: 1.2rem; display: grid; gap: 0.25rem; }
+
 .muted { color: #656d76; }
 .status { margin-top: 0.75rem; font-size: 0.85rem; color: #cf222e; }
 .status:empty { display: none; }
