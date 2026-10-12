@@ -37,6 +37,7 @@
       display: grid;
       gap: 0.75rem;
     }
+    .projects + h2 { margin-top: 2rem; }
     .project-card {
       background: #fff;
       border: 1px solid #d0d7de;
@@ -90,6 +91,10 @@
       margin-left: 0.5rem;
       vertical-align: middle;
     }
+    .section-note {
+      font-size: 0.85rem;
+      margin: -0.5rem 0 0.75rem;
+    }
     .badge-wip {
       background: #fff8c5;
       color: #9a6700;
@@ -112,26 +117,28 @@
 
   <main>
     <h2>iOS Apps</h2>
+    <p class="section-note"><a class="fork-link" href="https://apps.apple.com/jp/developer/ryosuke-hayashi/id1882116086">App Store の開発者ページ</a></p>
     <div class="projects">
       <div class="project-card">
-        <img class="app-icon" src="家計簿アイコン.png" alt="家計簿アイコン">
+        <img class="app-icon" src="家計簿アイコン.png" alt="毎日家計簿アイコン">
         <div class="card-content">
-          <h3><a class="fork-link" href="https://apps.apple.com/us/app/%E7%B4%B0%E3%81%8B%E3%81%8F%E3%82%84%E3%82%8A%E3%81%9F%E3%81%84%E4%BA%BA%E3%81%AE%E3%81%9F%E3%82%81%E3%81%AE%E5%AE%B6%E8%A8%88%E7%B0%BF/id6759987999">細かくやりたい人のための家計簿</a> <span class="badge">App Store</span></h3>
-          <p>細かく記録・管理したい人向けの家計簿アプリ</p>
+          <h3><a class="fork-link" href="https://apps.apple.com/jp/app/id6759987999">毎日家計簿</a> <span class="badge">App Store</span></h3>
+          <p>日毎 × ジャンル別に予算管理できる家計簿アプリ。「今日は外食にいくらまで使える？」をその場で判断できる</p>
           <p class="fork-info"><a class="fork-link" href="kakeibo/privacy-policy.html">プライバシーポリシー / Privacy Policy</a></p>
         </div>
       </div>
       <div class="project-card">
+        <img class="app-icon" src="事故らんでやアイコン.png" alt="事故らんでやアイコン">
         <div class="card-content">
-          <h3>4区道路リスク <span class="badge badge-wip">準備中</span></h3>
-          <p>練馬・板橋・北・豊島の道路を道幅・勾配・行き止まりで色分けし、車両サイズごとの要注意度を示す地図アプリ</p>
+          <h3><a class="fork-link" href="https://apps.apple.com/jp/app/id6819137724">事故らんでや</a> <span class="badge">App Store</span></h3>
+          <p>練馬・板橋・北・豊島の道路を道幅・坂の急さ・行き止まりで色分けし、車の大きさごとの要注意度を5段階で示す地図アプリ</p>
           <p class="fork-info"><a class="fork-link" href="mapCarAlart/privacy-policy.html">プライバシーポリシー / Privacy Policy</a></p>
         </div>
       </div>
       <div class="project-card">
         <img class="app-icon" src="pace-calculator/icon.png" alt="タイム計算機アイコン">
         <div class="card-content">
-          <h3><a class="fork-link" href="https://apps.apple.com/jp/app/%E3%82%BF%E3%82%A4%E3%83%A0%E8%A8%88%E7%AE%97%E6%A9%9F/id6819285966">タイム計算機</a> <span class="badge">App Store</span></h3>
+          <h3><a class="fork-link" href="https://apps.apple.com/jp/app/id6819285966">タイム計算機</a> <span class="badge">App Store</span></h3>
           <p>距離とタイムから、キロペース・400mのタイム・スプリットを計算する陸上・マラソン向けアプリ</p>
           <p class="fork-info"><a class="fork-link" href="pace-calculator/privacy-policy.html">プライバシーポリシー / Privacy Policy</a></p>
         </div>
@@ -147,17 +154,21 @@
         </div>
       </a>
       <a class="project-card" href="https://ryosukehys.github.io/sakenojin2026/">
-        <h3>sakenojin2026 <span class="badge">GitHub Pages</span></h3>
-        <p>にいがた酒の陣 2026（グループ共有機能を追加）</p>
-        <p class="fork-info">Forked from <span class="fork-link">tsurezure-lab/niigata-sake-no-jin-26</span></p>
+        <div class="card-content">
+          <h3>sakenojin2026 <span class="badge">GitHub Pages</span></h3>
+          <p>にいがた酒の陣 2026（グループ共有機能を追加）</p>
+          <p class="fork-info">Forked from <span class="fork-link">tsurezure-lab/niigata-sake-no-jin-26</span></p>
+        </div>
       </a>
     </div>
 
     <h2>Contact</h2>
     <div class="projects">
       <a class="project-card" href="https://forms.gle/v4TbPbfyFnyu8tgf6">
-        <h3>お問い合わせ・フィードバック</h3>
-        <p>アプリへのご意見・ご要望・バグ報告など、お気軽にどうぞ</p>
+        <div class="card-content">
+          <h3>お問い合わせ・フィードバック</h3>
+          <p>アプリへのご意見・ご要望・バグ報告など、お気軽にどうぞ</p>
+        </div>
       </a>
     </div>
   </main>
