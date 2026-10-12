@@ -1,0 +1,22 @@
+# 出雲駅伝コースマップ用に、出雲市周辺の OpenStreetMap データを取得してこのブランチに保存する（作業用の一時ブランチ）
+name: Fetch Izumo OSM data
+
+on:
+  push:
+    branches: [claude/izumo-ekiden-osm-data]
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 osm/fetch.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add osm/*.json.gz
+          git commit -m "出雲市周辺の OSM データを取得"
+          git push
