@@ -127,6 +127,15 @@ a { color: #0969da; }
 .help > p, .help h3, .help ol { margin: 0 0.8rem 0.6rem; }
 .help h3 { font-size: 0.85rem; margin-top: 0.8rem; }
 .help ol { padding-left: 1.2rem; display: grid; gap: 0.25rem; }
+.help .download {
+  display: inline-block;
+  padding: 0.3rem 0.8rem;
+  border-radius: 999px;
+  background: #0969da;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+}
 
 .muted { color: #656d76; }
 .status { margin-top: 0.75rem; font-size: 0.85rem; color: #cf222e; }

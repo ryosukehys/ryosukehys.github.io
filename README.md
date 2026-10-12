@@ -10,6 +10,7 @@
 
 - **デプロイ先**: https://ryosukehys.github.io/izumo-ekiden/
 - **コースの線**: `izumo-ekiden/tools/build_course.py` が OpenStreetMap の道路から組み立て、区間距離と通過地点の累計距離を公式値と照らし合わせてから `izumo-ekiden/data/course.geojson` に書き出します
+- **Google マップ用**: `izumo-ekiden/tools/build_kml.py` が `course.geojson` から Google マイマップに取り込める `izumo-ekiden/data/course.kml` を作ります
 - **地図**: 地理院タイル + [Leaflet](https://leafletjs.com/) 1.9.4（`izumo-ekiden/vendor/leaflet`）
 
 ### sakenojin2026
