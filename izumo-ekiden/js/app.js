@@ -278,6 +278,88 @@ kmToggle.addEventListener("change", updateKmLayer);
 checkpointToggle.addEventListener("change", updateCheckpointLayer);
 map.on("zoomend", updateKmLayer);
 
+// 全画面: 地図だけを画面いっぱいに出す。iPhone の Safari はページの全画面表示に対応していないので、
+// CSS で地図を広げ、対応しているブラウザ（Android・パソコン）ではブラウザの枠も消す。
+const ICONS = {
+  expand:
+    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
+  collapse:
+    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>',
+  locate:
+    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22"/></svg>',
+};
+
+function mapButton(bar, label, onClick) {
+  const btn = L.DomUtil.create("button", "", bar);
+  btn.type = "button";
+  btn.title = label;
+  btn.setAttribute("aria-label", label);
+  L.DomEvent.on(btn, "click", onClick);
+  return btn;
+}
+
+const mapButtons = {};
+const MapButtons = L.Control.extend({
+  options: { position: "topleft" },
+  onAdd() {
+    const bar = L.DomUtil.create("div", "leaflet-bar map-buttons");
+    mapButtons.full = mapButton(bar, "地図を全画面で見る", () => setFull(!isFull()));
+    mapButtons.full.innerHTML = ICONS.expand;
+    mapButtons.locate = mapButton(bar, "現在地", () => locateBtn.click());
+    mapButtons.locate.innerHTML = ICONS.locate;
+    mapButtons.locate.setAttribute("aria-pressed", "false");
+    L.DomEvent.disableClickPropagation(bar);
+    return bar;
+  },
+});
+new MapButtons().addTo(map);
+
+// 全画面のときだけ地図の上に出す、区間の色の凡例と現在地の文
+function mapOverlay(className) {
+  const el = L.DomUtil.create("div", className, map.getContainer());
+  L.DomEvent.disableClickPropagation(el);
+  L.DomEvent.disableScrollPropagation(el);
+  return el;
+}
+const legendEl = mapOverlay("map-legend");
+legendEl.innerHTML = Object.entries(LEG_COLORS)
+  .map(([leg, color]) => `<span style="--leg-color:${color}">${leg}区</span>`)
+  .join("");
+const mapHereEl = mapOverlay("map-here");
+// 地図の上の文から「現在地が出ないとき」へ飛ぶときは、全画面をやめて手順を見せる
+mapHereEl.addEventListener("click", (e) => {
+  if (e.target.closest('a[href="#locate-help"]')) setFull(false);
+});
+
+function setHere(content, { html = false } = {}) {
+  for (const el of [hereEl, mapHereEl]) {
+    if (html) el.innerHTML = content;
+    else el.textContent = content;
+  }
+}
+
+const isFull = () => document.body.classList.contains("map-full");
+
+function setFull(on) {
+  document.body.classList.toggle("map-full", on);
+  const label = on ? "全画面をやめる" : "地図を全画面で見る";
+  mapButtons.full.innerHTML = on ? ICONS.collapse : ICONS.expand;
+  mapButtons.full.title = label;
+  mapButtons.full.setAttribute("aria-label", label);
+  map.invalidateSize();
+  const root = document.documentElement;
+  if (on && root.requestFullscreen && !document.fullscreenElement) root.requestFullscreen().catch(() => {});
+  if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+}
+
+// ブラウザ側で全画面が解かれた（Android の戻る・Esc など）ら、地図も元に戻す
+document.addEventListener("fullscreenchange", () => {
+  if (!document.fullscreenElement && isFull()) setFull(false);
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && isFull()) setFull(false);
+});
+
 // 現在地: ボタンを押している間は位置を追い続ける。最初の1回だけ、コースと現在地が両方入るように地図を合わせる。
 const tracking = { on: false, fitted: false, accuracy: null, dot: null };
 
@@ -310,8 +392,10 @@ function describePosition(latlng) {
 }
 
 function setTrackingButton(on) {
-  locateBtn.classList.toggle("is-active", on);
-  locateBtn.setAttribute("aria-pressed", String(on));
+  for (const btn of [locateBtn, mapButtons.locate]) {
+    btn.classList.toggle("is-active", on);
+    btn.setAttribute("aria-pressed", String(on));
+  }
 }
 
 function stopTracking() {
@@ -326,13 +410,13 @@ function stopTracking() {
 locateBtn.addEventListener("click", () => {
   if (tracking.on) {
     stopTracking();
-    hereEl.textContent = "";
+    setHere("");
     return;
   }
   tracking.on = true;
   tracking.fitted = false;
   setTrackingButton(true);
-  hereEl.textContent = "現在地を取得しています…";
+  setHere("現在地を取得しています…");
   map.locate({ watch: true, setView: false, enableHighAccuracy: true, timeout: 20000, maximumAge: 5000 });
 });
 
@@ -361,7 +445,7 @@ map.on("locationfound", (e) => {
       .bindPopup("現在地")
       .addTo(map);
   }
-  hereEl.textContent = describePosition(e.latlng);
+  setHere(describePosition(e.latlng));
   if (!tracking.fitted) {
     tracking.fitted = true;
     const leg = state.legs.find((l) => l.props.leg === state.selected);
@@ -377,20 +461,24 @@ map.on("locationerror", (e) => {
   // 一度取れていれば、トンネルなどでの一時的な失敗（取得できない・時間切れ）は無視して追い続ける
   if (tracking.dot && (e.code === 2 || e.code === 3)) return;
   if (e.code === 3) {
-    hereEl.textContent = "現在地を取得しています…（時間がかかっています。屋外や窓際だと早く取れます）";
+    setHere("現在地を取得しています…（時間がかかっています。屋外や窓際だと早く取れます）");
     return;
   }
   stopTracking();
   if (e.code === 1) {
-    hereEl.innerHTML =
-      '位置情報の利用が許可されていません。<a href="#locate-help">現在地が出ないとき</a>の手順で許可してから、もう一度押してください。';
+    setHere(
+      '位置情報の利用が許可されていません。<a href="#locate-help">現在地が出ないとき</a>の手順で許可してから、もう一度押してください。',
+      { html: true },
+    );
     locateHelpEl.open = true;
   } else if (e.code === 2) {
-    hereEl.innerHTML =
-      '現在地を取得できませんでした。端末の位置情報サービスがオンになっているか（<a href="#locate-help">現在地が出ないとき</a>）確かめて、もう一度押してください。';
+    setHere(
+      '現在地を取得できませんでした。端末の位置情報サービスがオンになっているか（<a href="#locate-help">現在地が出ないとき</a>）確かめて、もう一度押してください。',
+      { html: true },
+    );
     locateHelpEl.open = true;
   } else {
-    hereEl.textContent = "このブラウザでは現在地を取得できません。";
+    setHere("このブラウザでは現在地を取得できません。");
   }
 });
 
